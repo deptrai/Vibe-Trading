@@ -1,0 +1,106 @@
+/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/api_server.py:267: DeprecationWarning: 
+        on_event is deprecated, use lifespan event handlers instead.
+
+        Read more about it in the
+        [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+        
+  @app.on_event("startup")
+INFO:     Started server process [16934]
+INFO:     Waiting for application startup.
+[warn] No frontend build found at /Users/luisphan/Documents/GitHub/Vibe-Trading/frontend/dist
+[warn] Run: cd frontend && npm run build
+==================================================
+  Vibe-Trading Server
+  http://127.0.0.1:8899
+==================================================
+
+Preflight Check
+ OK   │ LLM (openai)       │ claude-opus-4-7 via https://v98store.com/v1        
+ OK   │ OKX API            │ reachable                                          
+ OK   │ yfinance           │ reachable                                          
+ N/A  │ Tushare            │ TUSHARE_TOKEN not set (optional) (A-share data     
+      │                    │ unavailable)                                       
+ OK   │ akshare            │ installed                                          
+ OK   │ ccxt               │ installed                                          
+
+5/6 services ready
+
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8899 (Press CTRL+C to quit)
+INFO:     127.0.0.1:62022 - "GET /health HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62065 - "GET /sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62067 - "GET /sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62105 - "POST /sessions HTTP/1.1" 201 Created
+INFO:     127.0.0.1:62109 - "POST /sessions/ddf9d7689b85/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62113 - "GET /sessions/ddf9d7689b85/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62117 - "GET /sessions HTTP/1.1" 200 OK
+Runner: executing 
+/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/backtest/runner.py
+Runner: starting backtest subprocess...
+Runner: using Python: 
+/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/bin/python3
+Runner: subprocess finished in 0.96s
+Runner stdout:
+{"error": "Invalid config: 1 validation error for 
+BacktestConfigSchema\ninterval\n  Value error, unsupported interval '1d', must 
+be one of {'1H', '4H', '1m', '1D', '30m', '5m', '15m'} \n    For further 
+information visit https://errors.pydantic.dev/2.13/v/value_error"}
+
+Runner: executing 
+/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/backtest/runner.py
+Runner: starting backtest subprocess...
+Runner: using Python: 
+/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/bin/python3
+Runner: subprocess finished in 2.08s
+Runner stderr:
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/backtest/runner.py",
+line 544, in <module>
+    main(Path(sys.argv[1]))
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/backtest/runner.py",
+line 331, in main
+    signal_engine = engine_cls()
+                    ^^^^^^^^^^^^
+TypeError: SignalEngine.__init__() missing 1 required positional argument: 
+'params'
+
+Runner: executing 
+/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/backtest/runner.py
+Runner: starting backtest subprocess...
+Runner: using Python: 
+/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/bin/python3
+Runner: subprocess finished in 2.64s
+Runner stdout:
+{
+  "final_value": 755448.3055847158,
+  "total_return": -0.24455169441528424,
+  "annual_return": -0.13066796644713063,
+  "max_drawdown": -0.6448945898368164,
+  "sharpe": -0.13219344472924024,
+  "calmar": -0.2026,
+  "sortino": -0.2022,
+  "win_rate": 0.28205128205128205,
+  "profit_loss_ratio": 2.2427,
+  "profit_factor": 0.8811,
+  "max_consecutive_loss": 6,
+  "avg_holding_days": 17.9,
+  "trade_count": 39,
+  "benchmark_return": 0.948349,
+  "excess_return": -1.192901,
+  "information_ratio": -0.8508
+}
+
+INFO:     127.0.0.1:62153 - "GET /runs/20260504_024154_36_66835c HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62157 - "GET /runs/20260504_024154_36_66835c/pine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62161 - "GET /runs/20260504_024154_36_66835c/pine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62415 - "GET /sessions/96ba44a413c8/messages HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62417 - "GET /sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62421 - "GET /sessions/96ba44a413c8/events HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62427 - "GET /runs/20260504_005739_79_65c370 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62429 - "GET /runs/20260504_005739_79_65c370/pine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62436 - "GET /runs/20260504_005739_79_65c370 HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62437 - "GET /runs/20260504_005739_79_65c370/pine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62441 - "GET /sessions HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62445 - "GET /runs/20260504_024154_36_66835c/pine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62449 - "GET /runs/20260504_024154_36_66835c/pine HTTP/1.1" 200 OK
+INFO:     127.0.0.1:62453 - "GET /sessions/ddf9d7689b85/events HTTP/1.1" 200 OK
