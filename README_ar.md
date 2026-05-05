@@ -51,13 +51,15 @@
 
 ## 📰 أحدث الأخبار
 
+- **2026-05-04** 🖥️ **تحسين تجربة CLI التفاعلية + تنظيف CI**: أصبح الوضع التفاعلي يعرض شريط حالة سفلياً مباشراً يوضح provider/model ومدة الجلسة ووقت آخر تشغيل وإحصاءات استدعاءات الأدوات التراكمية، مع دعم تصفح السجل وتحرير المؤشر بأسهم لوحة المفاتيح عبر `prompt_toolkit` ([#69](https://github.com/HKUDS/Vibe-Trading/pull/69)). وعند غياب `prompt_toolkit` أو TTY، يعود CLI إلى Rich prompts. كما تمت مواءمة توقعات مسارات CI مع صندوق استيراد الملفات المعزز وحل `/tmp` عبر المنصات، فعاد main إلى الحالة الخضراء ([`bb67dc7`](https://github.com/HKUDS/Vibe-Trading/commit/bb67dc7cfcc11553c57d8962bee56381dca43758)).
+- **2026-05-03** 🛡️ **تصحيح لتعزيز الأمان**: يشدد المصادقة الافتراضية للـ API في النشر غير المحلي، ويحمي قراءات run/session/swarm الحساسة، ويقيّد حدود الرفع وقراءة الملفات المحلية، ويتحكم في أدوات shell بحسب نقطة الدخول، ويتحقق من الاستراتيجيات المولدة قبل الاستيراد، ويجعل صورة Docker تعمل افتراضياً كمستخدم غير root وبمنفذ منشور على localhost فقط. تبقى تجربة CLI وWeb UI المحلي منخفضة الاحتكاك؛ ويجب على نشر API/Web البعيد ضبط `API_AUTH_KEY`.
 - **2026-05-02** 🧭 **تحليل التوزيعات + خارطة طريق أوضح**: تمت إضافة مهارة `dividend-analysis` لأسهم الدخل، واستدامة التوزيعات، ونمو التوزيعات، وعائد المساهمين، وآليات تاريخ الاستحقاق السابق، وفحص فخاخ العائد المرتفع، مع تثبيتها باختبارات انحدار للمهارات المضمنة. تركز خارطة الطريق العامة الآن على Research Autopilot وData Bridge وOptions Lab وPortfolio Studio وAlpha Zoo وResearch Delivery وTrust Layer ومشاركة Community.
-- **2026-05-01** 🔥 **خريطة ارتباط حرارية + OpenAI Codex OAuth + مرشح pre-ST لأسهم A**: لوحة/API ارتباط جديدة تحسب ارتباطات العوائد المتحركة وتعرضها كخريطة حرارية ECharts لتحليل المحافظ والرموز ([#64](https://github.com/HKUDS/Vibe-Trading/pull/64)). مزود OpenAI Codex يدعم الآن ChatGPT OAuth عبر `vibe-trading provider login openai-codex`، مع بيانات Settings واختبارات انحدار للمحوّل ([#65](https://github.com/HKUDS/Vibe-Trading/pull/65)). تمت إضافة وتعزيز مهارة `ashare-pre-st-filter` لفحص مخاطر ST/*ST في أسهم A، مع فلترة صلة عقوبات Sina حتى لا تضخم إشارات قوائم حسابات الأوراق المالية عدّادات E2 ([#63](https://github.com/HKUDS/Vibe-Trading/pull/63)).
-- **2026-04-30** ⚙️ **إعدادات Web UI + تعزيز validation CLI**: تمت إضافة صفحة Settings لإعداد LLM provider/model وBase URL وreasoning effort وبيانات اعتماد مصادر البيانات محلياً. واجهات settings API محمية الآن عبر local/auth، كما أصبحت بيانات مزودي النماذج إعدادات مدفوعة بالبيانات ([#57](https://github.com/HKUDS/Vibe-Trading/pull/57)). كذلك تم تعزيز `python -m backtest.validation <run_dir>` لرفض غياب الوسيط، والمسار الفارغ، والمسار غير الصالح، والمسار غير الموجود، والمسار الذي ليس دليلاً برسائل واضحة قبل بدء التحقق ([#60](https://github.com/HKUDS/Vibe-Trading/pull/60)).
 
 <details>
 <summary>أخبار سابقة</summary>
 
+- **2026-05-01** 🔥 **خريطة ارتباط حرارية + OpenAI Codex OAuth + مرشح pre-ST لأسهم A**: لوحة/API ارتباط جديدة تحسب ارتباطات العوائد المتحركة وتعرضها كخريطة حرارية ECharts لتحليل المحافظ والرموز ([#64](https://github.com/HKUDS/Vibe-Trading/pull/64)). مزود OpenAI Codex يدعم الآن ChatGPT OAuth عبر `vibe-trading provider login openai-codex`، مع بيانات Settings واختبارات انحدار للمحوّل ([#65](https://github.com/HKUDS/Vibe-Trading/pull/65)). تمت إضافة وتعزيز مهارة `ashare-pre-st-filter` لفحص مخاطر ST/*ST في أسهم A، مع فلترة صلة عقوبات Sina حتى لا تضخم إشارات قوائم حسابات الأوراق المالية عدّادات E2 ([#63](https://github.com/HKUDS/Vibe-Trading/pull/63)).
+- **2026-04-30** ⚙️ **إعدادات Web UI + تعزيز validation CLI**: تمت إضافة صفحة Settings لإعداد LLM provider/model وBase URL وreasoning effort وبيانات اعتماد مصادر البيانات محلياً. واجهات settings API محمية الآن عبر local/auth، كما أصبحت بيانات مزودي النماذج إعدادات مدفوعة بالبيانات ([#57](https://github.com/HKUDS/Vibe-Trading/pull/57)). كذلك تم تعزيز `python -m backtest.validation <run_dir>` لرفض غياب الوسيط، والمسار الفارغ، والمسار غير الصالح، والمسار غير الموجود، والمسار الذي ليس دليلاً برسائل واضحة قبل بدء التحقق ([#60](https://github.com/HKUDS/Vibe-Trading/pull/60)).
 - **2026-04-28** 🚀 **إصدار v0.1.6** (`pip install -U vibe-trading-ai`): إصلاح إرجاع `vibe-trading --swarm-presets` فارغًا بعد `pip install` / `uv tool install` ([#55](https://github.com/HKUDS/Vibe-Trading/issues/55)) — ملفات YAML للإعدادات المسبقة الآن مضمّنة داخل حزمة `src.swarm` ومثبّتة بـ 6 اختبارات انحدار. إضافة إلى ذلك، محمّل AKShare يوجّه الآن صناديق ETF (`510300.SH`) والعملات الأجنبية (`USDCNH`) إلى نقاط النهاية الصحيحة مع تعزيز سلسلة البديل. تجميع كل التحديثات منذ v0.1.5: لوحة مقارنة المرجع، تدفق `/upload` + حدود الحجم، محمّل Futu (HK + أسهم A)، مهارة تصدير vnpy، تصليب أمني، التحميل الكسول للواجهة (688KB → 262KB).
 - **2026-04-27** 📊 **لوحة مقارنة المرجع + أمان الرفع**: مخرجات الاختبار الخلفي تشمل الآن لوحة مقارنة مرجعية (الرمز / عائد المرجع / العائد الفائض / نسبة المعلومات) مع الحلّ عبر yfinance لـ SPY و CSI 300 وغيرها ([#48](https://github.com/HKUDS/Vibe-Trading/issues/48)). إضافة إلى ذلك، نقطة `/upload` تتدفق جسم الطلب في أجزاء 1 ميغابايت وتتوقف فور تجاوز `MAX_UPLOAD_SIZE` مع تنظيف الملف الجزئي، بما يجعل حد 50 ميغابايت فعالاً تحت الطلبات الخبيثة/الضخمة ([#53](https://github.com/HKUDS/Vibe-Trading/pull/53)) — مثبّت بـ 4 اختبارات انحدار.
 - **2026-04-22** 🛡️ **تصليب + تكاملات جديدة**: فرض احتواء المسار في `safe_path` + عزل أدوات سجل التداول/حساب الظل، إضافة `MANIFEST.in` لتضمين `.env.example` / الاختبارات / ملفات Docker في sdist، التحميل الكسول على مستوى المسار يقلّص حزمة الواجهة الأولية من 688KB إلى 262KB. إضافة محمّل بيانات Futu لأسهم هونغ كونغ وA ([#47](https://github.com/HKUDS/Vibe-Trading/pull/47)) ومهارة تصدير vnpy CtaTemplate ([#46](https://github.com/HKUDS/Vibe-Trading/pull/46)).
@@ -262,6 +264,8 @@ docker compose up --build
 
 افتح `http://localhost:8899`. الخلفية + الواجهة الأمامية في حاوية واحدة.
 
+ينشر Docker الخلفية افتراضياً على `127.0.0.1:8899` فقط، ويشغل التطبيق كمستخدم حاوية غير root. إذا كنت تنوي تعريض الـ API خارج جهازك، فاضبط `API_AUTH_KEY` قوياً وأرسل `Authorization: Bearer <key>` من العملاء.
+
 ### المسار B: التثبيت المحلي
 
 ```bash
@@ -326,6 +330,10 @@ npx clawhub@latest install vibe-trading --force
 | `LANGCHAIN_MODEL_NAME` | نعم | اسم النموذج (مثلاً `deepseek/deepseek-v3.2`) |
 | `TUSHARE_TOKEN` | لا | رمز Tushare Pro لبيانات أسهم A (بديل AKShare) |
 | `TIMEOUT_SECONDS` | لا | مهلة استدعاء نموذج اللغة، الافتراضي 120 ثانية |
+| `API_AUTH_KEY` | موصى به للنشر الشبكي | Bearer token مطلوب عندما يكون الـ API قابلاً للوصول من عملاء غير محليين |
+| `VIBE_TRADING_ENABLE_SHELL_TOOLS` | لا | تفعيل صريح لأدوات shell في نشر API / MCP-SSE البعيد |
+| `VIBE_TRADING_ALLOWED_FILE_ROOTS` | لا | جذور إضافية مفصولة بفواصل لاستيراد المستندات وسجلات الوسطاء |
+| `VIBE_TRADING_ALLOWED_RUN_ROOTS` | لا | جذور إضافية مفصولة بفواصل لأدلة تشغيل الكود المولد |
 
 <sub>* Ollama لا يتطلب مفتاح API.</sub>
 
@@ -430,6 +438,12 @@ vibe-trading serve --port 8899
 | `PUT` | `/settings/data-sources` | تحديث إعدادات مصادر البيانات المحلية |
 
 توثيق تفاعلي: `http://localhost:8899/docs`
+
+### الإعدادات الأمنية الافتراضية
+
+في التطوير المحلي، يحافظ `vibe-trading serve` على بساطة سير عمل المتصفح. أي عميل غير محلي يصل إلى واجهات API الحساسة يحتاج إلى `API_AUTH_KEY`؛ استخدم `Authorization: Bearer <key>` لطلبات JSON والرفع. يتعامل Web UI مع بث EventSource بعد إدخال المفتاح نفسه مرة واحدة في Settings.
+
+أدوات shell متاحة للـ CLI المحلي وسير عمل localhost الموثوق، لكنها لا تُعرض افتراضياً لجلسات API البعيدة إلا إذا ضبطت صراحة `VIBE_TRADING_ENABLE_SHELL_TOOLS=1`. قارئات المستندات وسجلات التداول مقيدة افتراضياً بجذور الرفع/الاستيراد؛ ضع الملفات تحت `agent/uploads` أو `agent/runs` أو `./uploads` أو `./data` أو `~/.vibe-trading/uploads` أو `~/.vibe-trading/imports`، أو أضف دليلاً مخصصاً عبر `VIBE_TRADING_ALLOWED_FILE_ROOTS`.
 
 ### إعدادات Web UI
 
