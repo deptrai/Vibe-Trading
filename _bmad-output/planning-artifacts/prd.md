@@ -61,6 +61,20 @@ Dự án triển khai theo mô hình "Big Bang", ra mắt toàn bộ các tính 
 *   **FR3:** Tính năng "Optimize Strategy" tự động tìm tham số tối ưu qua RL.
 *   **FR4:** Tự động phát hiện sự kiện tin tức và đề xuất mã tài sản từ Knowledge Graph.
 *   **FR5:** Xuất báo cáo PDF "Verified Data" và Publish lên Marketplace.
+*   **FR6:** Giới hạn xử lý dữ liệu backtest tối đa 2 năm để đảm bảo hiệu suất.
+*   **FR7:** Tối ưu hóa tham số chiến lược tự động qua Offline Reinforcement Learning.
+*   **FR8:** Tích hợp Knowledge Graph để ánh xạ sự kiện tin tức vĩ mô sang mã tài sản.
+*   **FR9:** Explainable AI (XAI) - Giải thích bằng ngôn ngữ tự nhiên lý do AI thay đổi tham số chiến lược.
+*   **FR10:** Hiển thị biểu đồ tương tác (Interactive Multi-Chart) cho Equity Curve và Candlesticks.
+*   **FR11:** Cung cấp tính năng "Verified Data" PDF Report (Shadow Account).
+*   **FR12:** Tính năng Social Marketplace cho phép đăng tải, tìm kiếm và khám phá chiến lược.
+*   **FR13:** Hàng đợi tác vụ ưu tiên (Tiered Priority Queue) dành riêng cho Premium Users.
+*   **FR14:** Admin Monitoring Dashboard để theo dõi API Latency, Cache Hit Rates và Active Workers.
+*   **FR15:** Monte Carlo Stress Test - mô phỏng trượt giá/thiệt hại để đo rủi ro "Thiên nga đen".
+*   **FR16:** Generative Strategy Copilot - Tự động viết mã Python/PineScript dựa trên yêu cầu ngôn ngữ tự nhiên.
+*   **FR17:** DeFi-Native Simulator - Mô phỏng chi phí Gas, thanh khoản AMM và Impermanent Loss cho chiến lược Crypto.
+*   **FR18:** Perpetual Futures Engine - Mô phỏng Funding Rates, Margin (Cross/Isolated), và cơ chế Liquidations.
+*   **FR19:** Walk-Forward Analysis (WFA) - Cơ chế chia dữ liệu In-sample/Out-of-sample để kiểm thử độ bền bỉ của chiến lược.
 
 ## Non-Functional Requirements
 *   **Performance:** API Latency < 500ms; Tốc độ xử lý backtest 2 năm < 30 giây.

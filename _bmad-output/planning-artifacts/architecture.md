@@ -25,35 +25,50 @@ _This document outlines the technical solutioning and architecture decisions for
 5. **Updates:** Nowing tracks the progress via Server-Sent Events (SSE) or polling Redis task status.
 6. **Delivery:** Once the job succeeds, Nowing fetches the Backtest Metrics and Equity Curve from the Shared File System to display to the user.
 
-## 2. Redis/Celery Implementation
+## 2. Standardized Payload Schema (The Contract)
+
+To support rich data from user documents and standardize communication, Nowing and Vibe-Trading communicate via a strict JSON schema.
+
+**Payload Structure (Zod/TypeScript):**
+- **Simulation Environment:** `exchange`, `instrument_type` (SPOT/PERPETUAL), `initial_capital`, `trading_fees`, `slippage_tolerance`, `historical_range`, `gas_fee_model`, `track_impermanent_loss`.
+- **Risk Management:** `max_drawdown_percentage`, `stop_loss/take_profit`, `position_sizing`, `leverage`.
+- **Context Rules:** `assets`, `timeframe`, `indicators`, `natural_language_rules`, and `executable_code`.
+- **Execution Flags:** `enable_monte_carlo_stress_test`, `enable_rl_optimization`, `wfa_config` (In-sample/Out-of-sample split).
+
+Nowing is strictly responsible for parsing user intent/documents into this schema before dispatching the job.
+
+## 3. Redis/Celery Implementation
 
 **Architecture Details:**
 - **Broker & State Backend:** Redis is used for high-throughput, reliable task queueing. It ensures jobs are not lost if an execution worker crashes mid-task.
-- **Workers:** Auto-scaling Celery workers picking up asynchronous jobs.
-- **Task Types:** Separated into queues (e.g., `backtest`, `rl_optimization`, `knowledge_graph_sync`).
+- **Workers:** Auto-scaling Celery (or BullMQ) workers picking up asynchronous jobs.
+- **Task Types:** Separated into queues (e.g., `backtest`, `rl_optimization`, `knowledge_graph_sync`, `monte_carlo_stress_test`).
 
 **Scalability & Reliability (NFRs):**
 - **Auto-scaling:** Workers scale automatically when the Redis queue length exceeds 10 jobs.
 - **Latency:** Ensures the main API latency stays < 500ms, as the API only queues the job and returns a `job_id`. Backtests process asynchronously in < 30s.
 
-## 3. Knowledge Graph & RL Worker Isolation
+## 4. Knowledge Graph, RL, & Monte Carlo Isolation
 
 **Proactive Knowledge Graph (News-to-Asset Correlation) (FR4):**
-- **Data Sync:** Independent background Celery beat tasks crawl financial news and update the internal Knowledge Graph.
-- **Integration:** Exposes an API endpoint `GET /api/v1/kg/suggestions` for Nowing to query proactively when users ask open-ended questions.
+- **Data Sync:** Independent background tasks crawl financial news and update the internal Knowledge Graph.
+- **Integration:** Exposes an API endpoint `GET /api/v1/kg/suggestions` for Nowing to query proactively.
 
 **Offline Reinforcement Learning (Strategy Tuning) (FR3):**
 - **Worker Isolation:** RL tasks are extremely compute-intensive. They are routed to a dedicated `vibe-trading-rl-worker` queue.
-- **Resource Quotas:** The RL workers are deployed in strictly isolated Docker containers (cgroups enforced limits) to prevent them from starving the core Backtest workers of CPU/RAM.
+- **Resource Quotas:** The RL workers are deployed in strictly isolated Docker containers.
 
-## 4. Fulfillment of PRD Requirements
+**Monte Carlo Stress Test (Quick Win P3):**
+- **Worker Isolation:** Resampling simulations (10,000+ runs) to calculate 'Black Swan' risk probabilities are routed to dedicated analytical workers.
+
+## 5. Fulfillment of PRD Requirements
 
 **Functional Requirements:**
-- **FR1 (NLP to Params):** Nowing delegates parsing; Vibe-Trading receives strict JSON payloads via internal API.
+- **FR1 (NLP to Schema):** Nowing delegates parsing; Vibe-Trading receives strict `VibeTradingJobPayload` via message queue.
 - **FR2 (Preview Card):** Vibe-Trading provides a low-latency synchronous `/preview` endpoint.
-- **FR3 (RL Optimization):** Handled via isolated RL Celery workers.
+- **FR3 (RL Optimization & Generative Strategy):** Handled via isolated RL/Execution Celery workers.
 - **FR4 (Knowledge Graph):** Maintained asynchronously, accessible via internal query APIs.
-- **FR5 (PDF Reports):** Vibe-Trading generates PDF using `weasyprint` and saves to EFS; Nowing serves the file URL.
+- **FR5 (PDF Reports & Stress Tests):** Vibe-Trading generates metrics & Monte Carlo risk reports; saves to EFS.
 
 **Domain & Non-Functional Requirements:**
 - **Precision:** All PnL calculations use `Decimal` (6 decimal places) in Python, avoiding float drift.

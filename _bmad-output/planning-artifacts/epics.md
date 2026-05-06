@@ -14,11 +14,16 @@ This document provides the complete epic and story breakdown for Vibe-Trading In
 
 ### Functional Requirements
 
-FR1: Bóc tách các tham số (Mã tài sản, Chỉ báo, Tham số, Khung thời gian) từ câu lệnh ngôn ngữ tự nhiên.
+FR1: Bóc tách các tham số (Mã tài sản, Chỉ báo, Tham số, Khung thời gian) từ câu lệnh ngôn ngữ tự nhiên và chuyển thành Standardized Payload Schema.
 FR2: Hiển thị Strategy Preview Card để xác nhận thông số khi độ tự tin của AI dưới 0.9.
 FR3: Tính năng "Optimize Strategy" tự động tìm bộ tham số tốt nhất qua Reinforcement Learning.
 FR4: Tự động phát hiện sự kiện tin tức và đề xuất mã tài sản/chiến lược liên quan từ Knowledge Graph.
 FR5: Xuất báo cáo PDF "Verified Data" (Shadow Account Report) và tính năng chia sẻ lên Marketplace.
+FR15: Monte Carlo Stress Test - mô phỏng trượt giá/thiệt hại để đo rủi ro "Thiên nga đen".
+FR16: Generative Strategy Copilot - Tự động viết mã Python/PineScript dựa trên yêu cầu.
+FR17: DeFi-Native Simulator - Mô phỏng chi phí Gas, thanh khoản AMM và Impermanent Loss cho Crypto.
+FR18: Perpetual Futures Engine - Mô phỏng Funding Rates, Margin (Cross/Isolated), và Liquidations.
+FR19: Walk-Forward Analysis (WFA) - Cơ chế chia In-sample/Out-of-sample để chống Overfitting.
 
 ### NonFunctional Requirements
 
@@ -45,7 +50,7 @@ NFR6: Scalability - Worker pool tự động mở rộng instance dựa trên đ
 
 ### FR Coverage Map
 
-FR1: Epic 1 - Bóc tách tham số NLP
+FR1: Epic 1 - Bóc tách tham số NLP & Payload Schema
 FR2: Epic 1 - Strategy Preview Card
 FR3: Epic 3 - Optimize Strategy RL
 FR4: Epic 2 - Multi-market Backtest
@@ -59,6 +64,11 @@ FR11: Epic 4 - Shadow PDF
 FR12: Epic 4 - Marketplace Social
 FR13: Epic 5 - Task Queue/Priority
 FR14: Epic 5 - Admin Dashboard
+FR15: Epic 2 - Monte Carlo Stress Test
+FR16: Epic 3 - Generative Strategy Copilot
+FR17: Epic 2 - DeFi-Native Simulator
+FR18: Epic 2 - Perpetual Futures Engine
+FR19: Epic 3 - Walk-Forward Analysis
 
 ## Epic List
 
@@ -86,9 +96,9 @@ Quản trị Admin, Auto-scaling và Bảo mật nâng cao.
 Thiết lập kết nối bảo mật giữa Nowing và Vibe-Trading, đồng thời xây dựng khả năng bóc tách lệnh từ ngôn ngữ tự nhiên.
 
 ### Story 1.1: Secure Service-to-Service Bridge
-As a System Admin,
-I want to establish a secure connection between Nowing and Vibe-Trading using Bearer Token and IP Whitelisting,
-So that only Nowing can access the execution engine.
+As a Nowing End-User,
+I want my trading strategies and financial parameters to be transmitted securely to the execution engine,
+So that my proprietary trading logic and account details are protected from unauthorized access.
 
 **Acceptance Criteria:**
 **Given** Vibe-Trading API server is running
@@ -96,16 +106,16 @@ So that only Nowing can access the execution engine.
 **Then** Vibe-Trading returns a 200 OK response
 **And** any request without a valid key or from an unknown IP returns 401 Unauthorized
 
-### Story 1.2: Natural Language Parameter Extraction
+### Story 1.2: Standardized Payload Schema & Natural Language Parameter Extraction
 As a Trader (Alex),
-I want Nowing to extract trading parameters (Symbol, RSI, Timeframe) from my text prompt,
-So that I don't have to manually fill out a form.
+I want Nowing to extract trading parameters (Symbol, RSI, Timeframe) from my text prompt or uploaded documents,
+So that I don't have to manually fill out a form, and the data is formatted into a strict `VibeTradingJobPayload`.
 
 **Acceptance Criteria:**
-**Given** a user prompt "Backtest RSI < 30 for BTC-USDT on 1H for 1 year"
-**When** the NLP engine processes the text
-**Then** it returns a JSON object with: `symbol: "BTC-USDT"`, `indicator: "RSI"`, `threshold: 30`, `timeframe: "1H"`, `period: "1y"`
-**And** it handles basic variations in natural language
+**Given** a user prompt or uploaded strategy document
+**When** the Nowing NLP engine processes the text
+**Then** it returns a validated JSON object conforming to `VibeTradingJobPayload` (SimulationEnvironment, RiskManagement, ContextRules)
+**And** it gracefully handles missing parameters by assigning defaults or asking for clarification
 
 ### Story 1.3: Strategy Preview API
 As a Frontend Developer,
@@ -122,9 +132,9 @@ So that I can show the user what the AI understood before running a heavy backte
 Xây dựng hệ thống hàng đợi Redis/Celery cho backtest đa thị trường.
 
 ### Story 2.1: Async Job Queue with Redis/Celery
-As a System Architect,
-I want to implement a Redis-backed Celery queue for executing backtest jobs asynchronously,
-So that the main API server remains responsive while heavy computations run in the background.
+As a Trader,
+I want my heavy backtest jobs to be processed in the background without freezing the chat interface,
+So that I can continue interacting with the AI assistant or submit other tasks while waiting for results.
 
 **Acceptance Criteria:**
 **Given** a backtest request from Nowing
@@ -144,15 +154,49 @@ So that I can backtest any strategy across different global markets.
 **And** it handles API rate limits using the built-in retry mechanism
 
 ### Story 2.3: 2-Year Lookback Constraint & Results Persistence
-As a DevOps Engineer,
-I want the execution engine to enforce a maximum 2-year lookback period and save results to a shared volume,
-So that I can control resource usage and ensure Nowing can retrieve the results later.
+As a Trader,
+I want my backtest results to be reliably saved and accessible for later review, with a sensible 2-year data limit to ensure fast processing,
+So that I don't experience timeouts and can always revisit my past strategy reports.
 
 **Acceptance Criteria:**
 **Given** a backtest request for "5 years" of data
 **When** the job starts
 **Then** it automatically truncates the period to the last 2 years
 **And** the output (CSV/JSON/Plots) is saved to the shared `/runs/` directory for retrieval
+
+### Story 2.4: Monte Carlo Stress Test
+As a Risk-Averse Trader,
+I want the engine to run Monte Carlo simulations (resampling) on my backtest results,
+So that I can see the probability of "Black Swan" events and extreme drawdowns.
+
+**Acceptance Criteria:**
+**Given** a successfully completed backtest job with `enable_monte_carlo_stress_test=true`
+**When** the worker processes the flag
+**Then** it runs 10,000+ resampled paths on the historical trade series
+**And** it outputs a risk distribution graph and 95% Confidence Interval metrics
+
+### Story 2.5: DeFi-Native Simulation Environment
+As a Crypto/DeFi Trader,
+I want the backtest engine to simulate on-chain conditions including Gas Fees, AMM slippage, and Impermanent Loss,
+So that my crypto strategies (especially LP strategies) have realistic performance metrics.
+
+**Acceptance Criteria:**
+**Given** a backtest job targeting DEXes (`exchange = 'UNISWAP_V3'`)
+**When** the simulation executes trades
+**Then** it deducts dynamic Gas Fees based on the `gas_fee_model`
+**And** it calculates slippage dynamically based on pool liquidity depth rather than a static percentage
+**And** it tracks and reports Impermanent Loss if the strategy involves providing liquidity
+
+### Story 2.6: Perpetual Futures & Liquidation Engine
+As a Derivatives Trader,
+I want the backtest engine to simulate Perpetual Futures mechanics including Funding Rates and Margin Liquidations,
+So that I can accurately backtest high-leverage strategies.
+
+**Acceptance Criteria:**
+**Given** a backtest job trading Perpetual Futures with leverage > 1x
+**When** the simulation executes
+**Then** it deducts/adds Funding Rate payments based on simulated 8-hour intervals
+**And** it accurately triggers liquidation if the margin ratio drops below the maintenance threshold
 
 ## Epic 3: AI-Driven Strategy Evolution (RL & Graph)
 Tối ưu hóa tham số qua RL và kết nối tri thức qua Knowledge Graph.
@@ -190,6 +234,29 @@ So that I can trust the AI and understand the "Why" before I trade.
 **Then** the Agent provides a clear explanation (e.g., "I reduced the timeframe because recent volatility suggests a shorter holding period is safer")
 **And** it cites specific metrics (Sharpe improvement, Max Drawdown reduction)
 
+### Story 3.4: Generative Strategy Copilot (P2)
+As a Quantitative Analyst,
+I want Nowing to auto-generate Python/PineScript execution code based on my natural language description,
+So that Vibe-Trading can run custom, complex logic directly without me writing the code.
+
+**Acceptance Criteria:**
+**Given** a natural language rule ("Buy when RSI < 30 and MACD crosses over")
+**When** Nowing processes the intent
+**Then** it generates valid execution code (e.g., Python `def next(self):`)
+**And** populates the `executable_code` field in the payload
+**And** Vibe-Trading correctly compiles/executes this code safely in the sandbox
+
+### Story 3.5: Walk-Forward Analysis (WFA)
+As a Quant Analyst,
+I want the system to perform Walk-Forward Analysis during strategy optimization,
+So that I can ensure my strategy works on unseen data and isn't overfitted to the past.
+
+**Acceptance Criteria:**
+**Given** a request to optimize a strategy via RL
+**When** the optimization job runs
+**Then** it splits the historical data into rolling In-sample (train) and Out-of-sample (test) windows
+**And** it compares performance between the two sets and reports the "Out-of-sample decay rate"
+
 ## Epic 4: Advanced Reporting & Social Marketplace
 Hoàn thiện báo cáo PDF và hệ sinh thái chia sẻ chiến lược.
 
@@ -226,8 +293,8 @@ So that other users can discover, follow, or (optionally) subscribe to my strate
 **Then** the strategy and its verified metrics are added to the public discovery feed
 **And** other users can search and filter strategies by Sharpe ratio or Win rate
 
-## Epic 5: Governance & Scaling Infrastructure
-Quản trị Admin, Auto-scaling và Bảo mật nâng cao.
+## Epic 5: Governance & Performance Reliability
+Đảm bảo trải nghiệm người dùng mượt mà thông qua cơ chế ưu tiên, giám sát chất lượng dịch vụ và tự động mở rộng sức mạnh tính toán.
 
 ### Story 5.1: Tiered Priority Queue for Premium Users
 As a Business Owner (Victor),
@@ -252,9 +319,9 @@ So that I can proactively identify and resolve performance bottlenecks.
 **And** the system sends an alert if the error rate exceeds 5%
 
 ### Story 5.3: Automated Cleanup & Scaling Policy
-As a DevOps Engineer,
-I want the system to automatically prune old artifacts and scale worker instances based on queue length,
-So that I can optimize infrastructure costs and prevent disk exhaustion.
+As a Premium User,
+I want the execution platform to automatically scale up its processing power during high traffic,
+So that my complex backtests and Monte Carlo simulations always complete within the SLA timeframe regardless of system load.
 
 **Acceptance Criteria:**
 **Given** a disk usage threshold of 80% or artifacts older than 7 days

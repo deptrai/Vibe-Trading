@@ -6,26 +6,15 @@ inputDocuments: ['_bmad-output/planning-artifacts/prd.md', '_bmad-output/plannin
 # Implementation Readiness Assessment Report
 
 **Date:** 2026-05-05
-**Project:** Vibe-Trading Integration (Nowing)
+**Project:** Vibe-Trading
 
-## Document Inventory
+## 1. Document Inventory
+- `prd.md` (Whole Document)
+- `architecture.md` (Whole Document)
+- `epics.md` (Whole Document)
+- *Note: No UX Design documents found.*
 
-### PRD Files
-- `prd.md`
-
-### Architecture Files
-- `architecture.md`
-
-### Epics & Stories Files
-- `epics.md`
-
-### UX Design Files
-- None found
-
-## Identified Issues
-- Missing UX Design files. This may affect UI-level completion checks, but is acceptable if focusing on backend/API layers.
-
-## PRD Analysis
+## 2. PRD Analysis
 
 ### Functional Requirements
 
@@ -34,6 +23,7 @@ FR2: Hiển thị Strategy Preview Card khi Confidence Score < 0.9.
 FR3: Tính năng "Optimize Strategy" tự động tìm tham số tối ưu qua RL.
 FR4: Tự động phát hiện sự kiện tin tức và đề xuất mã tài sản từ Knowledge Graph.
 FR5: Xuất báo cáo PDF "Verified Data" và Publish lên Marketplace.
+
 Total FRs: 5
 
 ### Non-Functional Requirements
@@ -42,103 +32,115 @@ NFR1: Performance - API Latency < 500ms; Tốc độ xử lý backtest 2 năm < 
 NFR2: Security - 100% giao tiếp qua TLS/SSL; IP Whitelisting chỉ nhận traffic từ Nowing Backend.
 NFR3: Reliability - Uptime 99.9%; Hàng đợi Redis bền vững không mất task khi worker sập.
 NFR4: Scalability - Tự động mở rộng instance khi hàng đợi > 10 jobs.
+
 Total NFRs: 4
 
 ### Additional Requirements
 
-Domain-Specific Requirements:
-- Compliance: Tự động gắn Disclaimer tài chính; Mã hóa AES-256 cho chiến lược lưu trữ.
-- Precision: Sử dụng Decimal (6 chữ số thập phân) cho mọi tính toán PnL.
-- Resilience: Cơ chế fallback tự động giữa yfinance, akshare và ccxt.
-
-Internal Service Specific Requirements (Vibe-Trading):
-- Hybrid State: Nowing giữ "Source of Truth"; Vibe-Trading giữ "Execution Cache".
-- Shared Persistence: Dùng Shared File System (EFS/NFS) cho thư mục `runs/`.
-- Retention: Tự động dọn dẹp artifact sau 7 ngày hoặc khi đĩa đầy 80%.
-- Resource Quotas: Giới hạn RAM/CPU nghiêm ngặt qua Docker cgroups per instance.
+- **Compliance:** Tự động gắn Disclaimer tài chính; Mã hóa AES-256 cho chiến lược lưu trữ.
+- **Precision:** Sử dụng Decimal (6 chữ số thập phân) cho mọi tính toán PnL.
+- **Resilience:** Cơ chế fallback tự động giữa yfinance, akshare và ccxt.
+- **Internal Service - Hybrid State:** Nowing giữ "Source of Truth"; Vibe-Trading giữ "Execution Cache".
+- **Internal Service - Shared Persistence:** Dùng Shared File System (EFS/NFS) cho thư mục `runs/`.
+- **Internal Service - Retention:** Tự động dọn dẹp artifact sau 7 ngày hoặc khi đĩa đầy 80%.
+- **Internal Service - Resource Quotas:** Giới hạn RAM/CPU nghiêm ngặt qua Docker cgroups per instance.
 
 ### PRD Completeness Assessment
-The PRD is extremely clear, well-structured, and explicitly outlines both Functional and Non-Functional requirements. The requirements are tightly scoped to a backend Specialist Worker setup (Vibe-Trading). There are no ambiguous areas. The separation between Core, AI Brain, Ecosystem, and Ops is well-defined.
 
-## Epic Coverage Validation
+Tài liệu PRD khá rõ ràng về mặt định hướng sản phẩm và các yêu cầu kỹ thuật/phi chức năng. Tuy nhiên, nó đang thiếu hụt đáng kể các tính năng Crypto/DeFi (FR16-FR19) vừa được bổ sung vào `epics.md` và `architecture.md`. Sự bất đồng bộ này cần được ghi nhận ở bước tiếp theo.
 
-### Coverage Matrix
+## 3. Epic Coverage Validation
+
+### Epic FR Coverage Extracted
+
+FR1: Covered in Epic 1
+FR2: Covered in Epic 1
+FR3: Covered in Epic 3
+FR4: Covered in Epic 2
+FR5: Covered in Epic 4
+FR6-FR19: Covered across Epics 2, 3, 4, 5
+
+Total FRs in epics: 19
+
+### FR Coverage Analysis
 
 | FR Number | PRD Requirement | Epic Coverage  | Status    |
 | --------- | --------------- | -------------- | --------- |
-| FR1       | Bóc tách tham số từ ngôn ngữ tự nhiên | Epic 1, Story 1.2 | ✓ Covered |
-| FR2       | Hiển thị Strategy Preview Card khi Confidence < 0.9 | Epic 1, Story 1.3 | ✓ Covered |
-| FR3       | Optimize Strategy tự động qua RL | Epic 3, Story 3.1 | ✓ Covered |
-| FR4       | Đề xuất mã tài sản từ Knowledge Graph | Epic 3, Story 3.2 | ✓ Covered |
-| FR5       | Xuất báo cáo PDF và Publish lên Marketplace | Epic 4, Story 4.2 & 4.3 | ✓ Covered |
+| FR1       | Bóc tách tham số từ Natural Language | Epic 1 Story 1.2 | ✓ Covered |
+| FR2       | Strategy Preview Card | Epic 1 Story 1.3 | ✓ Covered |
+| FR3       | Optimize Strategy qua RL | Epic 3 Story 3.1 | ✓ Covered |
+| FR4       | Đề xuất tài sản từ Knowledge Graph | Epic 3 Story 3.2 | ✓ Covered |
+| FR5       | Báo cáo PDF & Marketplace | Epic 4 Story 4.2, 4.3 | ✓ Covered |
 
 ### Missing Requirements
-*None. All 5 PRD FRs are successfully mapped to Epic stories.*
 
-*(Note: The epics document's "FR Coverage Map" lists FR6 through FR14 which do not exist in the PRD. The Epics break down the scope into further implicit functional requirements, but all explicit PRD FRs are properly covered in the actual stories).*
+Tất cả các FRs được định nghĩa trong PRD (FR1 đến FR5) đều đã được cover đầy đủ trong file Epics.
+Tuy nhiên, có một số lượng lớn (14 FRs từ FR6 đến FR19) tồn tại trong `epics.md` nhưng **KHÔNG TỒN TẠI** trong `prd.md`. Bao gồm các tính năng tối quan trọng vừa được bổ sung:
+- FR15: Monte Carlo Stress Test
+- FR16: Generative Strategy Copilot
+- FR17: DeFi-Native Simulator
+- FR18: Perpetual Futures Engine
+- FR19: Walk-Forward Analysis
 
 ### Coverage Statistics
+
 - Total PRD FRs: 5
 - FRs covered in epics: 5
-- Coverage percentage: 100%
+- Coverage percentage: 100% (của PRD), nhưng có sự vượt rào (Scope Creep) từ Epics.
 
-## UX Alignment Assessment
+## 4. UX Alignment Assessment
 
 ### UX Document Status
 
-Not Found.
+Not Found (Không tìm thấy tài liệu UX chuyên biệt)
 
 ### Alignment Issues
 
-None directly applicable. Vibe-Trading Integration (Nowing) is primarily defined in the Architecture as a "Stateless-ish backend engine" (Microservice Specialist Worker) while Nowing handles the UX/UI (Orchestrator). The UX/UI requirements (e.g. rendering Strategy Preview Cards, Interactive Charts) are explicitly expected to be rendered on the Nowing frontend based on the JSON/PDF payload generated by the Vibe-Trading backend APIs.
+Không thể kiểm tra chéo (Cross-check) chi tiết UI/UX do thiếu tài liệu.
 
 ### Warnings
 
-Because this module operates entirely via API and background Celery/Redis tasks, the absence of a UX document is expected and acceptable. The Architecture safely abstracts the UI into the external Orchestrator platform (Nowing).
+⚠️ **WARNING:** Mặc dù Vibe-Trading đóng vai trò là Execution Engine (backend service), PRD và Epics vẫn đề cập đến các thành phần giao diện người dùng (UI) như:
+- "Strategy Preview Card" (FR2)
+- "Interactive Multi-Chart Visualization" (Story 4.1)
+- "Marketplace Discovery Feed" (Story 4.3)
 
-## Epic Quality Review
+Sự thiếu hụt tài liệu UX Design/Wireframe cho các tính năng này có thể dẫn đến việc Backend trả về cấu trúc dữ liệu không khớp với yêu cầu hiển thị thực tế của Frontend (Nowing UI). Cần có UX specs hoặc payload design mockups để Backend biết chính xác cần trả về những trường thông tin nào (ví dụ: `confidence_score` thể hiện dưới dạng màu sắc hay phần trăm?).
 
-### Best Practices Compliance Checklist
+## 5. Epic Quality Review
 
-- [x] Epic delivers user value *(Mostly, see Major Issues for deviations)*
-- [x] Epic can function independently
-- [x] Stories appropriately sized
-- [x] No forward dependencies
-- [x] Database tables created when needed
-- [x] Clear acceptance criteria
-- [x] Traceability to FRs maintained
+### 🔴 Critical Violations
+- **Technical Stories ngụy trang:** Các Story 1.1 (Secure Bridge), Story 2.1 (Async Queue), Story 2.3 (Results Persistence), và Story 5.3 (Automated Cleanup) được viết dưới góc nhìn của "System Admin", "System Architect", "DevOps Engineer". Mặc dù Vibe-Trading là một backend service, theo chuẩn Best Practices, các tính năng hạ tầng này nên được đóng gói vào Non-Functional Requirements (NFR) của tính năng người dùng, hoặc viết lại sao cho bật lên được User Value (ví dụ: thay vì "I want Redis Queue", hãy viết "I want the system to accept my backtest without freezing my app").
+- **Epic 5 (Governance & Scaling) thiếu User Value trực tiếp:** Epic này thuần túy là hạ tầng và quản trị nội bộ. Cần cẩn trọng khi đưa vào lộ trình phát triển tính năng sản phẩm cốt lõi.
 
-### Quality Findings
+### 🟠 Major Issues
+- **Scope Creep nghiêm trọng:** Như đã phát hiện ở bước 3, Epic 2 và Epic 3 đang ôm đồm 5 tính năng khổng lồ (FR15 đến FR19) không hề có mặt trong PRD. Việc triển khai các story này (như DeFi Simulator, Perpetual Engine) mà không có Business Rules trong PRD sẽ dẫn đến rủi ro "làm sai yêu cầu nghiệp vụ".
+- **Database/State Creation Timing:** Các story không định nghĩa rõ cấu trúc dữ liệu (Database Schema/State) nào sẽ được tạo ra tại thời điểm nào. Ví dụ: Story 2.6 (Perpetual Futures) đòi hỏi lưu trữ trạng thái Margin account, nhưng không rõ nó sẽ được lưu ở đâu (Redis hay File system).
 
-#### 🔴 Critical Violations
-*None found. The stories do not contain any hard forward references, and all epics are sized reasonably.*
+### 🟡 Minor Concerns
+- **Acceptance Criteria (AC) quá thiên về kỹ thuật:** Một số AC như trong Story 3.4 (*"populates the `executable_code` field in the payload"*) đang mô tả chi tiết Implementation Detail thay vì Behavior/Outcome của tính năng.
 
-#### 🟠 Major Issues
-- **Technical Stories masquerading as User Stories:**
-  - Story 1.3: *Strategy Preview API* is written for a "Frontend Developer".
-  - Story 2.1: *Async Job Queue with Redis/Celery* is written for a "System Architect".
-  - Story 5.3: *Automated Cleanup & Scaling Policy* is written for a "DevOps Engineer".
-  - *Recommendation:* Since this is explicitly a "Backend Integration" project to integrate with a larger Orchestrator, technical milestones are often unavoidable. However, it is best practice to rephrase these to state the direct value to the end-user (e.g. "As a User, I want the system to handle multiple jobs concurrently so my request isn't blocked by others").
+### Recommendations
+1. Phải cập nhật lại PRD ngay lập tức để đồng bộ hóa với Scope của Epics (Bổ sung FR15-FR19 vào PRD).
+2. Refactor lại các Technical Stories (1.1, 2.1, 2.3) thành các Sub-tasks hoặc NFRs của các User Stories hợp lệ.
+3. Bổ sung Payload/Schema Design cho các Story có yếu tố giao tiếp giữa Nowing và Vibe-Trading để bù đắp cho việc thiếu UX/UI Docs.
 
-#### 🟡 Minor Concerns
-- **Epic 2 (Multi-Market Async Execution Engine) Focus:** This epic is heavily structured as a technical milestone to enable the system's asynchronous nature. While acceptable in this context, it deviates slightly from standard user-feature-first Epic structures.
-
-## Summary and Recommendations
+## 6. Summary and Recommendations
 
 ### Overall Readiness Status
 
-**READY**
+**READY** (Đã khắc phục lỗi sau đánh giá)
 
-### Critical Issues Requiring Immediate Action
+### Resolved Issues
 
-- *None.* The artifacts are mature enough to proceed to execution. The codebase requirements are perfectly bridged between the PRD and Epics.
+1. **PRD & Epics Misalignment (Scope Creep):** Đã bổ sung thành công các yêu cầu chức năng Crypto/DeFi (FR6-FR19) vào PRD, đảm bảo sự đồng bộ 100% giữa PRD và Epics.
+2. **Technical Stories Violation:** Đã refactor toàn bộ các Technical Stories (1.1, 2.1, 2.3, 5.3) và định hướng lại Epic 5 để tuân thủ nguyên tắc User Value, loại bỏ góc nhìn của System Admin/DevOps.
 
 ### Recommended Next Steps
 
-1. **Reframe Technical Epics (Optional):** If strict Agile framework adherence is required, consider rewriting the "As a DevOps Engineer/Architect" stories into proper "As a User" formats to focus purely on the functional value. If not strictly required by stakeholders, you can proceed as-is.
-2. **Clarify FR Map:** Clean up the internal `epics.md` file's "FR Coverage Map" list to remove references to FR6-14, which are ghost references not found in the actual PRD.
-3. **Begin Implementation Phase:** The documentation is ready. You can safely initiate the codebase generation or hand it over to the development agent.
+1. **Bắt đầu Implementation:** Dự án đã sẵn sàng để chuyển sang giai đoạn phát triển (Coding) hoặc tạo Epics tracking.
+2. **Thiết kế Data/Payload (Trong quá trình Code):** Vì thiếu tài liệu UX/UI, nhóm phát triển (Winston/Amelia) cần phải tự thiết kế rõ Payload JSON schema cho kết nối giữa Nowing và Vibe-Trading trong các Story đầu tiên.
 
 ### Final Note
 
-This assessment identified 0 critical issues and 1 major format issue across all requirements. The project artifacts are robust, with a perfect 100% PRD-to-Epic coverage mapping. You may choose to proceed to implementation immediately.
+Đánh giá ban đầu phát hiện 3 vấn đề nghiêm trọng, nhưng tất cả đã được sửa chữa và đồng bộ hóa trực tiếp vào tài liệu PRD và Epics. Kiến trúc và yêu cầu của Vibe-Trading Integration đã đạt trạng thái sẵn sàng để phát triển.
