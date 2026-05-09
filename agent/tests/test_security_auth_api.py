@@ -28,13 +28,14 @@ def clear_api_key(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.delenv("VIBE_TRADING_TRUST_DOCKER_LOOPBACK", raising=False)
     monkeypatch.delenv("VIBE_TRADING_ENABLE_SHELL_TOOLS", raising=False)
     monkeypatch.setattr(api_server, "_API_KEY", "")
+    api_server._cached_allowed_ips = None
 
 
 def test_remote_write_requires_api_key_when_key_unset() -> None:
     response = _remote_client().post("/sessions", json={})
 
     assert response.status_code == 403
-    assert "API_AUTH_KEY" in response.json()["detail"]
+    assert "Access denied" in response.json()["detail"]
 
 
 def test_local_dev_write_allowed_when_key_unset() -> None:
@@ -79,6 +80,7 @@ def test_configured_api_key_required_for_sensitive_reads(
 ) -> None:
     monkeypatch.setenv("API_AUTH_KEY", "secret")
     monkeypatch.setattr(api_server, "_API_KEY", "secret")
+    monkeypatch.setenv("ALLOWED_IPS", "203.0.113.10")
     client = _remote_client()
 
     for path in [
@@ -95,6 +97,7 @@ def test_configured_api_key_accepts_bearer_for_sensitive_reads(
 ) -> None:
     monkeypatch.setenv("API_AUTH_KEY", "secret")
     monkeypatch.setattr(api_server, "_API_KEY", "secret")
+    monkeypatch.setenv("ALLOWED_IPS", "203.0.113.10")
 
     response = _remote_client().get(
         "/runs",
@@ -109,6 +112,7 @@ def test_configured_api_key_required_for_session_event_stream(
 ) -> None:
     monkeypatch.setenv("API_AUTH_KEY", "secret")
     monkeypatch.setattr(api_server, "_API_KEY", "secret")
+    monkeypatch.setenv("ALLOWED_IPS", "203.0.113.10")
 
     response = _remote_client().get("/sessions/missing/events")
 
@@ -120,6 +124,7 @@ def test_session_event_stream_accepts_query_token_for_browser_eventsource(
 ) -> None:
     monkeypatch.setenv("API_AUTH_KEY", "secret")
     monkeypatch.setattr(api_server, "_API_KEY", "secret")
+    monkeypatch.setenv("ALLOWED_IPS", "203.0.113.10")
 
     response = _remote_client().get("/sessions/missing/events?api_key=secret")
 

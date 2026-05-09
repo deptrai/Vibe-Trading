@@ -4,7 +4,7 @@ story_key: '1-1-secure-service-to-service-bridge'
 epic_num: 1
 story_num: 1
 title: 'Secure Service-to-Service Bridge'
-status: 'ready-for-dev'
+status: 'done'
 ---
 
 # Story 1.1: Secure Service-to-Service Bridge
@@ -67,3 +67,13 @@ status: 'ready-for-dev'
 ---
 **Status:** ready-for-dev
 **Note:** Ultimate context engine analysis completed - comprehensive developer guide created.
+
+### Review Findings
+- [x] [Review][Decision] Potential IP Spoofing / Reverse Proxy Masking — The app relies on `request.client.host`. If behind a proxy, `X-Forwarded-For` is needed. Should we support `X-Forwarded-For`?
+- [x] [Review][Patch] Missing IP verification when API key is configured [agent/api_server.py:457]
+- [x] [Review][Patch] Unhandled TypeError during IPv4/IPv6 Mixed Comparison [agent/api_server.py:375]
+- [x] [Review][Patch] Fragile Error Handling Invalidates Entire Whitelist [agent/api_server.py:374]
+- [x] [Review][Patch] Strict Subnet Parsing Fails Silently [agent/api_server.py:374]
+- [x] [Review][Patch] Missing required automated tests [agent/tests]
+- [x] [Review][Patch] Direct use of os.getenv instead of Pydantic [agent/api_server.py:364]
+- [x] [Review][Defer] Performance Anti-Pattern: Per-Request Configuration Parsing [agent/api_server.py:364] — deferred, pre-existing
