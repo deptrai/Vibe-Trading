@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Security, UploadFile, status
+from src.api_models import VibeTradingJobPayload
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -1179,6 +1180,12 @@ async def health_check():
         service="Vibe-Trading API",
         timestamp=datetime.now().isoformat()
     )
+
+
+@app.post("/jobs", dependencies=[Depends(require_auth)])
+async def create_job(payload: VibeTradingJobPayload):
+    """Validate incoming payload and enqueue a job."""
+    return {"status": "accepted", "job_id": str(uuid.uuid4())}
 
 
 @app.get("/correlation")

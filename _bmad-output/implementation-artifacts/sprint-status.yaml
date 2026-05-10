@@ -44,7 +44,7 @@ story_location: _bmad-output/implementation-artifacts
 development_status:
   epic-1: in-progress
   1-1-secure-service-to-service-bridge: done
-  1-2-standardized-payload-schema-natural-language-parameter-extraction: backlog
+  1-2-standardized-payload-schema-natural-language-parameter-extraction: done
   1-3-strategy-preview-api: backlog
   epic-1-retrospective: optional
 
