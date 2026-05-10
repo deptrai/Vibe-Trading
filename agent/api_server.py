@@ -1185,7 +1185,19 @@ async def health_check():
 @app.post("/jobs", dependencies=[Depends(require_auth)])
 async def create_job(payload: VibeTradingJobPayload):
     """Validate incoming payload and enqueue a job."""
-    return {"status": "accepted", "job_id": str(uuid.uuid4())}
+    from agent.src.worker import run_backtest_job
+    try:
+        task = await asyncio.to_thread(
+            run_backtest_job.apply_async,
+            args=[payload.model_dump(mode="json")],
+            queue="backtest"
+        )
+        return {"status": "accepted", "job_id": task.id}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Job queue is currently unavailable"
+        )
 
 @app.post("/preview", response_model=PreviewResponse, dependencies=[Depends(require_auth)])
 async def preview_strategy(payload: VibeTradingJobPayload):

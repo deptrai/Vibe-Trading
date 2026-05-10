@@ -1,3 +1,7 @@
+import sys
+from unittest.mock import MagicMock
+sys.modules["celery"] = MagicMock()
+
 import pytest
 from fastapi.testclient import TestClient
 from agent.api_server import app, _is_local_client

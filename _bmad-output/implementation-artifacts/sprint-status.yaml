@@ -1,5 +1,5 @@
 # generated: 2026-05-05
-# last_updated: 2026-05-09
+# last_updated: 2026-05-10
 # project: Vibe-Trading Integration (Nowing)
 # project_key: NOKEY
 # tracking_system: file-system
@@ -35,7 +35,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 
 generated: 2026-05-05
-last_updated: 2026-05-09
+last_updated: 2026-05-10
 project: Vibe-Trading Integration (Nowing)
 project_key: NOKEY
 tracking_system: file-system
@@ -49,7 +49,7 @@ development_status:
   epic-1-retrospective: optional
 
   epic-2: backlog
-  2-1-async-job-queue-with-redis-celery: backlog
+  2-1-async-job-queue-with-redis-celery: done
   2-2-multi-market-data-loading-system: backlog
   2-3-2-year-lookback-constraint-results-persistence: backlog
   2-4-monte-carlo-stress-test: backlog
@@ -76,3 +76,4 @@ development_status:
   5-2-admin-monitoring-dashboard: backlog
   5-3-automated-cleanup-scaling-policy: backlog
   epic-5-retrospective: optional
+nal
