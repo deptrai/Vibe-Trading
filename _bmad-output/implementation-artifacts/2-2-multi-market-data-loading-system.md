@@ -4,7 +4,7 @@ story_key: '2-2-multi-market-data-loading-system'
 epic_num: 2
 story_num: 2
 title: 'Crypto-First Data Loading System'
-status: 'in-progress'
+status: 'done'
 ---
 
 # Story 2.2: Crypto-First Data Loading System
@@ -30,17 +30,17 @@ status: 'in-progress'
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Enhance `run_backtest_job` in Worker (AC: 1, 4)
-  - [ ] Subtask 1.1: Import and instantiate the backtest runner or integrate the `runner.py` logic within `agent/src/worker.py`.
-  - [ ] Subtask 1.2: Pass the configured parameters from `VibeTradingJobPayload` (like assets, timeframe) to the engine runner.
-- [ ] Task 2: Validate Crypto-First & Retry Mechanisms (AC: 1, 2, 3)
-  - [ ] Subtask 2.1: Ensure that the data loader is configured to prioritize CCXT and fallback RPCs.
-  - [ ] Subtask 2.2: Add validation to reject non-crypto symbols (e.g., returning "Phase 2 feature" error) for now.
-  - [ ] Subtask 2.3: Review crypto loaders to verify they implement retry mechanisms with backoff for rate limit handling.
-- [ ] Task 3: Testing and Validation (AC: 1, 2, 3, 4)
-  - [ ] Subtask 3.1: Add integration tests simulating backtest jobs for Crypto to verify correct provider selection.
-  - [ ] Subtask 3.2: Verify handling of API rate limits by mocking failed responses and expecting retries.
-  - [ ] Subtask 3.3: Verify that non-crypto symbols are correctly rejected.
+- [x] Task 1: Enhance `run_backtest_job` in Worker (AC: 1, 4)
+  - [x] Subtask 1.1: Import and instantiate the backtest runner or integrate the `runner.py` logic within `agent/src/worker.py`.
+  - [x] Subtask 1.2: Pass the configured parameters from `VibeTradingJobPayload` (like assets, timeframe) to the engine runner.
+- [x] Task 2: Validate Crypto-First & Retry Mechanisms (AC: 1, 2, 3)
+  - [x] Subtask 2.1: Ensure that the data loader is configured to prioritize CCXT and fallback RPCs.
+  - [x] Subtask 2.2: Add validation to reject non-crypto symbols (e.g., returning "Phase 2 feature" error) for now.
+  - [x] Subtask 2.3: Review crypto loaders to verify they implement retry mechanisms with backoff for rate limit handling.
+- [x] Task 3: Testing and Validation (AC: 1, 2, 3, 4)
+  - [x] Subtask 3.1: Add integration tests simulating backtest jobs for Crypto to verify correct provider selection.
+  - [x] Subtask 3.2: Verify handling of API rate limits by mocking failed responses and expecting retries.
+  - [x] Subtask 3.3: Verify that non-crypto symbols are correctly rejected.
 
 ## Dev Notes
 
@@ -70,22 +70,34 @@ status: 'in-progress'
 ## Dev Agent Record
 
 ### Agent Model Used
-(To be filled by dev agent)
-
-### Debug Log References
-(To be filled by dev agent)
+Antigravity (DeepMind)
 
 ### Completion Notes List
-(To be filled by dev agent)
+- Enhanced `run_backtest_job` in `agent/src/worker.py` to parse `VibeTradingJobPayload`.
+- Implemented symbol validation to prioritize Crypto assets and reject non-crypto strings (Stock symbols like AAPL are excluded).
+- Integrated `ccxt` loader via `get_loader_cls_with_fallback`.
+- Added strict retry mechanism for API rate limits and connection errors leveraging Celery's `autoretry_for` (`ConnectionError`, `TimeoutError`, `ccxt.NetworkError`, `ccxt.RateLimitExceeded`).
+- Replaced mock `time.sleep` with real data fetch via `loader.fetch()`.
+- Added mock tests in `test_worker.py` replacing the outdated mock implementation logic.
 
 ### File List
-(To be filled by dev agent)
+- `agent/src/worker.py`
+- `agent/tests/unit/test_worker.py`
 
 ### Change Log
-(To be filled by dev agent)
+- Removed old `time.sleep` mock logic.
+- Included `VibeTradingJobPayload` serialization to backend logic and error statuses.
+- Configured exception reraising for Celery retries on rate limits.
 
 ---
-**Status:** in-progress
+**Status:** done
 
 ### Review Findings
-(To be filled after code review)
+- [x] [Review][Patch] Global State Mutation (Concurrency Race Condition) [`agent/src/worker.py:35`]
+- [x] [Review][Patch] Inaccurate Error Handling and Unintended Retries for Empty Data [`agent/src/worker.py:55`]
+- [x] [Review][Patch] Loss of Stack Trace Details & Traceback Alteration (`logger.error` and `raise e`) [`agent/src/worker.py:75`]
+- [x] [Review][Patch] Environment variable assignment crashes on `None` [`agent/src/worker.py:35`]
+- [x] [Review][Patch] Missing safeguard against `NoneType` assets [`agent/src/worker.py:16`]
+- [x] [Review][Patch] Fragile DataFrame properties assumptions [`agent/src/worker.py:62`]
+- [x] [Review][Patch] Date formatting granularity loss [`agent/src/worker.py:42`]
+- [x] [Review][Defer] Flawed Asset Classification Heuristic (`endswith("USD")` etc.) [`agent/src/worker.py:19`] — deferred, pre-existing

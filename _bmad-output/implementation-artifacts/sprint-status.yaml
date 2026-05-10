@@ -50,8 +50,8 @@ development_status:
 
   epic-2: in-progress
   2-1-async-job-queue-with-redis-celery: done
-  2-2-multi-market-data-loading-system: in-progress
-  2-3-2-year-lookback-constraint-results-persistence: backlog
+  2-2-multi-market-data-loading-system: done
+  2-3-2-year-lookback-constraint-results-persistence: in-progress
   2-4-monte-carlo-stress-test: backlog
   2-5-defi-native-simulation-environment: backlog
   2-6-perpetual-futures-liquidation-engine: backlog
@@ -76,4 +76,3 @@ development_status:
   5-2-admin-monitoring-dashboard: backlog
   5-3-automated-cleanup-scaling-policy: backlog
   epic-5-retrospective: optional
-nal
