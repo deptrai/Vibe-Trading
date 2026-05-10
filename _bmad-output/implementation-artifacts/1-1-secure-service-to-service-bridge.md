@@ -76,4 +76,4 @@ status: 'done'
 - [x] [Review][Patch] Strict Subnet Parsing Fails Silently [agent/api_server.py:374]
 - [x] [Review][Patch] Missing required automated tests [agent/tests]
 - [x] [Review][Patch] Direct use of os.getenv instead of Pydantic [agent/api_server.py:364]
-- [x] [Review][Defer] Performance Anti-Pattern: Per-Request Configuration Parsing [agent/api_server.py:364] — deferred, pre-existing
+- [x] [Review][Defer] Performance Anti-Pattern: Per-Request Configuration Parsing [agent/api_server.py:364] — **Resolved 2026-05-11** via env-string-keyed cache in `_get_allowed_networks()`

@@ -7,10 +7,38 @@ services:
       - agent/.env
     environment:
       - VIBE_TRADING_TRUST_DOCKER_LOOPBACK=1
+      - REDIS_URL=redis://redis:6379/0
     volumes:
       - vibe-runs:/app/agent/runs
       - vibe-sessions:/app/agent/sessions
     restart: unless-stopped
+    depends_on:
+      - redis
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    restart: unless-stopped
+
+  rl-worker:
+    build: .
+    command: celery -A src.worker worker -Q rl_optimization -c 1 --max-memory-per-child=512000
+    env_file:
+      - agent/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - vibe-runs:/app/agent/runs
+      - vibe-sessions:/app/agent/sessions
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 1G
+    restart: unless-stopped
+    depends_on:
+      - redis
 
   frontend:
     image: node:20

@@ -4,7 +4,7 @@ story_key: '3-1-offline-rl-strategy-tuner'
 epic_num: 3
 story_num: 1
 title: 'Offline RL Strategy Tuner'
-status: 'ready-for-dev'
+status: 'in-progress'
 ---
 
 # Story 3.1: Offline RL Strategy Tuner

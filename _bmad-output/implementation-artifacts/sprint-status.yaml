@@ -50,7 +50,7 @@ development_status:
 
   epic-2: in-progress
   2-1-async-job-queue-with-redis-celery: done
-  2-2-multi-market-data-loading-system: done
+  2-2-crypto-first-data-loading-system: done
   2-3-2-year-lookback-constraint-results-persistence: done
   2-4-monte-carlo-stress-test: done
   2-5-defi-native-simulation-environment: done
@@ -58,11 +58,10 @@ development_status:
   epic-2-retrospective: optional
 
   epic-3: in-progress
-  3-1-offline-rl-strategy-tuner: ready-for-dev
+  3-1-offline-rl-strategy-tuner: done
   3-2-knowledge-graph-integration-news-to-asset: backlog
   3-3-explainable-ai-xai-for-strategy-changes: backlog
-  3-4-generative-strategy-copilot-p2: backlog
-  3-5-walk-forward-analysis-wfa: backlog
+  3-4-walk-forward-analysis-wfa: backlog
   epic-3-retrospective: optional
 
   epic-4: backlog
@@ -76,3 +75,7 @@ development_status:
   5-2-admin-monitoring-dashboard: backlog
   5-3-automated-cleanup-scaling-policy: backlog
   epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-generative-strategy-copilot: backlog
+  epic-6-retrospective: optional

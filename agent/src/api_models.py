@@ -40,6 +40,8 @@ class WFAConfig(BaseModel):
 class ExecutionFlags(BaseModel):
     enable_monte_carlo_stress_test: bool = False
     enable_rl_optimization: bool = False
+    rl_max_trials: int = Field(50, ge=10, le=200)
+    rl_optimization_target: str = Field("sharpe", pattern=r"^(sharpe|pnl|sortino)$")
     wfa_config: Optional[WFAConfig] = None
 
 class VibeTradingJobPayload(BaseModel):
