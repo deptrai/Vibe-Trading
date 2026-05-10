@@ -58,7 +58,7 @@ def run_backtest_job(self, payload: dict) -> dict:
     Background task to run a backtest job.
     Accepts the serialized VibeTradingJobPayload as a dictionary.
     """
-    from src.api_models import VibeTradingJobPayload
+    from src.api_models import VibeTradingJobPayload, InstrumentType
     from backtest.loaders.registry import get_loader_cls_with_fallback
 
     try:
@@ -80,6 +80,12 @@ def run_backtest_job(self, payload: dict) -> dict:
                 track_impermanent_loss=job_payload.simulation_environment.track_impermanent_loss
             )
             logger.info(f"Initialized DeFiSimulator for DEX exchange: {exchange}")
+
+        perpetual_simulator = None
+        if job_payload.simulation_environment.instrument_type == InstrumentType.PERPETUAL:
+            from src.perpetual_simulator import PerpetualSimulator
+            perpetual_simulator = PerpetualSimulator()
+            logger.info("Initialized PerpetualSimulator for PERPETUAL instrument type")
 
         # 2-Year Lookback Constraint (using calendar-aware delta)
         now = datetime.now(timezone.utc)
@@ -182,8 +188,70 @@ def run_backtest_job(self, payload: dict) -> dict:
                                 asset_returns = df[close_col].pct_change().replace([np.inf, -np.inf], np.nan).dropna()
                                 if len(asset_returns) > 0:
                                     # Simulate strategy returns
-                                    simulated_trade_returns = asset_returns * np.random.choice([0, 1, -1], size=len(asset_returns), p=[0.5, 0.3, 0.2])
-                                    
+                                    random_positions = np.random.choice([0, 1, -1], size=len(asset_returns), p=[0.5, 0.3, 0.2])
+                                    simulated_trade_returns = asset_returns * random_positions
+
+                                    liquidation_events = []
+                                    total_funding_fees = 0.0
+
+                                    if perpetual_simulator is not None:
+                                        from decimal import Decimal
+                                        leverage_dec = Decimal(str(job_payload.risk_management.leverage))
+                                        initial_cap_dec = Decimal(str(initial_cap))
+                                        
+                                        # Use a stateful simulation for path-dependent perpetuals
+                                        new_returns = simulated_trade_returns.values.copy()
+                                        is_liquidated_state = False
+                                        
+                                        # Pre-calculate constants to avoid Decimal conversion in loop
+                                        entry_price_dec = Decimal('1.0')
+                                        liq_price_dec = perpetual_simulator.calculate_liquidation_price(entry_price_dec, leverage_dec, True) # long
+                                        liq_price_short_dec = perpetual_simulator.calculate_liquidation_price(entry_price_dec, leverage_dec, False) # short
+                                        
+                                        last_funding_ts = None
+                                        
+                                        for i in range(len(asset_returns)):
+                                            if is_liquidated_state:
+                                                new_returns[i] = 0.0 # No more returns after liquidation
+                                                continue
+                                                
+                                            pos = random_positions[i]
+                                            if pos == 0:
+                                                continue
+                                                
+                                            ts = asset_returns.index[i]
+                                            is_long = (pos == 1)
+                                            
+                                            # 1. Apply Funding Fee (Only once per 8h window)
+                                            # Logic: if hour is 0, 8, 16 AND we haven't applied for this specific timestamp
+                                            if hasattr(ts, 'hour') and ts.hour % 8 == 0 and ts != last_funding_ts:
+                                                funding_rate = Decimal('0.0001') # Default mock
+                                                pos_size = initial_cap_dec * leverage_dec
+                                                fee = perpetual_simulator.calculate_funding_fee(pos_size, funding_rate, is_long)
+                                                total_funding_fees += float(fee)
+                                                # Funding impacts return relative to initial capital
+                                                if initial_cap_dec > 0:
+                                                    new_returns[i] += float(fee / initial_cap_dec)
+                                                last_funding_ts = ts
+                                            
+                                            # 2. Check Liquidation
+                                            # Simplified path-dependency: check if current bar return hits liq threshold
+                                            ret = asset_returns.iloc[i]
+                                            mark_price = entry_price_dec * Decimal(str(1.0 + ret))
+                                            
+                                            current_liq_price = liq_price_dec if is_long else liq_price_short_dec
+                                            
+                                            if perpetual_simulator.check_liquidation(mark_price, current_liq_price, is_long):
+                                                liquidation_events.append({
+                                                    "timestamp": str(ts),
+                                                    "position": "LONG" if is_long else "SHORT",
+                                                    "mark_price": float(mark_price),
+                                                    "liquidation_price": float(current_liq_price)
+                                                })
+                                                new_returns[i] = -1.0 # Total loss of margin
+                                                is_liquidated_state = True
+
+                                        simulated_trade_returns = pd.Series(new_returns, index=asset_returns.index)
                                     # Apply DeFi penalties if in a DEX environment
                                     if defi_simulator is not None:
                                         # Proxy values for dynamic calculation
@@ -213,6 +281,9 @@ def run_backtest_job(self, payload: dict) -> dict:
                                     )
                                     
                                     if mc_results.get("status") == "success":
+                                        if perpetual_simulator is not None:
+                                            mc_results["liquidation_events"] = liquidation_events
+                                            mc_results["total_funding_fees"] = total_funding_fees
                                         data_summary[symbol]["monte_carlo"] = mc_results
                                         mc_path = os.path.join(job_dir, f"{safe_symbol}_monte_carlo.json")
                                         with open(mc_path, "w") as f:
