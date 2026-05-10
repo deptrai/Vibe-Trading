@@ -9,7 +9,7 @@ const messages = {
   localApiKeyHint: "Stored only in this browser. Leave blank to clear it.",
   localApiKeySaved: "Local API key saved",
   localApiKeySave: "Save local key",
-  settingsUnavailable: "Settings are unavailable",
+  settingchainlensvailable: "Settings are unavailable",
   llmSettings: "LLM Settings",
   llmSettingsDesc: "Choose the model used by the agent and save it to the project-local agent/.env file.",
   llmConnection: "Connection",

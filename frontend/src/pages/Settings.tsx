@@ -193,7 +193,7 @@ export function Settings() {
         <div className="flex min-h-32 items-center justify-center rounded-lg border bg-card p-5 text-sm text-muted-foreground">
           {settingsLoadError ? (
             <div className="text-center">
-              <div className="font-medium text-foreground">{t.settingsUnavailable}</div>
+              <div className="font-medium text-foreground">{t.settingchainlensvailable}</div>
               <div className="mt-1">{settingsLoadError}</div>
             </div>
           ) : (
