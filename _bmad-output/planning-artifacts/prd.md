@@ -22,32 +22,37 @@ workflowType: 'prd'
 **Date:** 2026-05-05
 
 ## Executive Summary
-Nowing hướng tới trở thành **Siêu trợ lý AI "All-in-one"** cho nhà đầu tư tài chính chuyên nghiệp. Dự án thực hiện tích hợp sâu Vibe-Trading vào hệ sinh thái Nowing nhằm triệt tiêu rào cản kỹ thuật trong phân tích định lượng. Người dùng có thể chuyển hóa ý tưởng giao dịch từ ngôn ngữ tự nhiên thành báo cáo backtest chi tiết mà không cần kiến thức lập trình.
+Nowing hướng tới trở thành **Siêu trợ lý AI Crypto-Native** cho nhà đầu tư tiền mã hóa và DeFi chuyên nghiệp. Dự án tích hợp sâu Vibe-Trading vào hệ sinh thái Nowing nhằm tối ưu hóa các chiến lược giao dịch, phân tích thanh khoản, và mô phỏng Perpetual Futures/AMM. Người dùng có thể chuyển hóa ý tưởng giao dịch crypto phức tạp thành báo cáo backtest chi tiết mà không cần kiến thức lập trình.
 
-### Strategic Differentiator: "Zero-Technical Friction"
-Nowing đóng vai trò "Bộ não" điều hành, phối hợp với "Cánh tay thực thi" Vibe-Trading để tự động hóa toàn trình: bóc tách dữ liệu, viết mã chiến lược, chạy backtest và trình bày kết quả. Điểm đột phá nằm ở khả năng **tự tiến hóa chiến lược (RL)** và **gợi ý chủ động (Knowledge Graph)** ngay trong luồng chat.
+### Strategic Differentiator: "DeFi-Native & Zero-Technical Friction"
+Nowing đóng vai trò "Bộ não", phối hợp với "Cánh tay thực thi" Vibe-Trading để tự động hóa toàn trình: bóc tách dữ liệu thị trường Crypto, xử lý mô phỏng trượt giá/thanh khoản phi tập trung, chạy backtest và trình bày kết quả. Điểm đột phá nằm ở khả năng **mô phỏng chính xác môi trường DeFi/Perps (Gas, Funding Rates)** và **tự tiến hóa chiến lược (RL)** ngay trong luồng chat.
 
 ## Success Criteria
 *   **User Success:** 100% bước xác nhận chiến lược qua Visual Cards; Phản hồi AI ban đầu < 5 giây; Tỷ lệ hiểu lệnh đúng ngay lần đầu > 80%.
 *   **Business Success:** Đạt 40% adoption trong tháng đầu; Tăng 15% tỷ lệ chuyển đổi gói Premium; Priority Queue cho người dùng trả phí (< 5 giây chờ).
 *   **Technical Success:** API Reliability > 99%; Cache Hit Rate > 70% (L1/L2 caching); Sai lệch dữ liệu thực thi và hiển thị bằng 0.
 
-## Project Scoping (Unified Release)
-Dự án triển khai theo mô hình "Big Bang", ra mắt toàn bộ các tính năng trong một lần duy nhất:
-*   **Core:** Backtest VN, US, Crypto (2 năm dữ liệu); Strategy Preview Card.
-*   **AI Brain:** Offline Reinforcement Learning (Strategy Tuning); Proactive Knowledge Graph (News-to-Asset).
+## Project Scoping (Phased Release)
+Dự án triển khai theo lộ trình từng giai đoạn (Phased Rollout) để tối ưu hóa nguồn lực:
+**Phase 1: Crypto-Native Focus (Current)**
+*   **Core:** Backtest chuyên biệt Crypto (Spot, Perpetual, On-chain data - 2 năm dữ liệu); Strategy Preview Card.
+*   **AI Brain:** Offline Reinforcement Learning (Strategy Tuning); Proactive Knowledge Graph (Crypto News & On-chain Events).
+
+**Phase 2: Multi-Market Expansion (Future)**
+*   **Core:** Mở rộng hỗ trợ thị trường chứng khoán truyền thống (VN, US Stocks).
+*   **AI Brain:** Mở rộng Knowledge Graph sang tài chính vĩ mô và tin tức doanh nghiệp.
 *   **Ecosystem:** Strategy Marketplace; Shadow Account PDF Reports.
 *   **Ops:** Redis/Celery Task Queue; Auto-scaling Workers; IP Whitelisting.
 
 ## User Journeys
-1.  **Alex (Happy Path):** Ra lệnh backtest RSI BTC -> Xác nhận Visual Card -> Nhận kết quả sau 15 giây.
+1.  **Alex (Happy Path):** Ra lệnh backtest chiến lược Arbitrage DEX/CEX cho ETH -> Xác nhận Visual Card -> Hệ thống mô phỏng (tính cả Gas/Slippage) -> Nhận kết quả sau 15 giây.
 2.  **Alex (Recovery):** Câu lệnh mơ hồ -> AI gợi ý chiến lược MA/RSI mẫu -> Chạy thành công.
 3.  **Minh (Admin):** Theo dõi Latency/Cache Dashboard -> Phát hiện nghẽn dữ liệu -> Kích hoạt Fail-over.
 
 ## Domain-Specific Requirements
 *   **Compliance:** Tự động gắn Disclaimer tài chính; Mã hóa AES-256 cho chiến lược lưu trữ.
 *   **Precision:** Sử dụng Decimal (6 chữ số thập phân) cho mọi tính toán PnL.
-*   **Resilience:** Cơ chế fallback tự động giữa yfinance, akshare và ccxt.
+*   **Resilience:** Thiết kế kiến trúc data loader mở. Phase 1 ưu tiên `ccxt` làm nòng cốt và tích hợp On-chain RPC nodes cho Crypto. Phase 2 sẽ tái kích hoạt `yfinance` và `akshare` làm fallback cho chứng khoán.
 
 ## Internal Service Specific Requirements (Vibe-Trading)
 *   **Hybrid State:** Nowing giữ "Source of Truth"; Vibe-Trading giữ "Execution Cache".

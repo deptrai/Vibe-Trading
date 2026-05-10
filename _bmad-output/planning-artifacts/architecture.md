@@ -74,5 +74,5 @@ Nowing is strictly responsible for parsing user intent/documents into this schem
 - **Precision:** All PnL calculations use `Decimal` (6 decimal places) in Python, avoiding float drift.
 - **Security:** Internal IP Whitelisting (Vibe-Trading only accepts traffic from Nowing). Strategies are encrypted (AES-256) at rest.
 - **Caching:** L1 (Redis) & L2 (DuckDB/Parquet) implemented to ensure >70% cache hits and reduce external API calls.
-- **Data Resilience:** Automated fallbacks programmed in the data loaders (`yfinance` -> `akshare` -> `ccxt`).
+- **Data Resilience:** Automated fallbacks programmed in the data loaders prioritizing Crypto (`ccxt` -> RPC nodes for Phase 1; `yfinance`/`akshare` deferred to Phase 2).
 - **Retention:** Cron jobs automatically prune the `runs/` artifacts after 7 days or when disk usage hits 80%.

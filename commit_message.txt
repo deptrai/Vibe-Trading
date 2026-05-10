@@ -1,0 +1,12 @@
+test: expand test coverage for API, workers, and payload schemas
+
+This commit introduces a comprehensive test suite generated to expand automation coverage and ensure system reliability, particularly focusing on the newly integrated async background jobs and robust Pydantic schemas.
+
+Key additions:
+- **API Tests:** Added Playwright-style tests for `/health`, `/preview`, and `/jobs` endpoints (validating IP whitelisting, authentication headers, and response formats).
+- **Backend Unit Tests:** Added pytest coverage for:
+  - `VibeTradingJobPayload` validation logic, specifically boundary conditions like SPOT leverage limits.
+  - Background worker behavior and error state mock handling.
+  - Proxy IP extraction and loopback checks within the authentication middleware.
+- **E2E Tests:** Established foundational UI end-to-end tests simulating the user flow from prompt entry to strategy preview card rendering and job submission.
+- **Architectural Cleanup:** Refactored fragile global mocks in test suites to use localized `monkeypatch`, mitigating test pollution.

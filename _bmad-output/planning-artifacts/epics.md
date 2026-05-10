@@ -42,7 +42,7 @@ NFR6: Scalability - Worker pool tự động mở rộng instance dựa trên đ
 - **Worker Isolation**: RL tasks chạy trên dedicated worker pool với Docker resource quotas (cgroups).
 - **Symbol Normalization**: Nowing chịu trách nhiệm chuẩn hóa mã tài sản trước khi gọi Vibe-Trading.
 - **Hybrid State Model**: Nowing giữ Source of Truth; Vibe-Trading giữ Execution Cache.
-- **Data Resilience**: Tích hợp cơ chế fallback tự động (yfinance -> akshare -> ccxt).
+- **Data Resilience**: Tích hợp cơ chế fallback tự động ưu tiên Crypto: ccxt -> RPC nodes (Phase 1), yfinance/akshare (Phase 2).
 
 ### UX Design Requirements
 
@@ -65,35 +65,39 @@ FR12: Epic 4 - Marketplace Social
 FR13: Epic 5 - Task Queue/Priority
 FR14: Epic 5 - Admin Dashboard
 FR15: Epic 2 - Monte Carlo Stress Test
-FR16: Epic 3 - Generative Strategy Copilot
+FR16: Epic 6 - Generative Strategy Copilot
 FR17: Epic 2 - DeFi-Native Simulator
 FR18: Epic 2 - Perpetual Futures Engine
 FR19: Epic 3 - Walk-Forward Analysis
 
 ## Epic List
 
-### Epic 1: Internal Service Bridge & NLP Interface
-Thiết lập kết nối bảo mật và bóc tách lệnh từ ngôn ngữ tự nhiên.
+### Epic 1: Intelligent Trading Assistant & Secure Order Transmission
+Thiết lập kết nối bảo mật và bóc tách lệnh từ ngôn ngữ tự nhiên, bảo vệ chiến lược của người dùng.
 **FRs covered:** FR1, FR2.
 
-### Epic 2: Multi-Market Async Execution Engine
-Xây dựng hệ thống hàng đợi Redis/Celery cho backtest đa thị trường.
-**FRs covered:** FR4, FR6.
+### Epic 2: Crypto-Native Async Execution Engine (Phase 1)
+Xây dựng hệ thống hàng đợi Redis/Celery cho backtest chuyên biệt Crypto (Mở rộng đa thị trường ở Phase 2).
+**FRs covered:** FR4, FR6, FR15, FR17, FR18.
 
 ### Epic 3: AI-Driven Strategy Evolution (RL & Graph)
 Tối ưu hóa tham số qua RL và kết nối tri thức qua Knowledge Graph.
-**FRs covered:** FR3, FR7, FR8, FR9.
+**FRs covered:** FR3, FR7, FR8, FR9, FR19.
 
 ### Epic 4: Advanced Reporting & Social Marketplace
 Hoàn thiện báo cáo PDF và hệ sinh thái chia sẻ chiến lược.
 **FRs covered:** FR5, FR10, FR11, FR12.
 
-### Epic 5: Governance & Scaling Infrastructure
-Quản trị Admin, Auto-scaling và Bảo mật nâng cao.
+### Epic 5: Premium User Experience & Enterprise Stability
+Quản trị Admin, tối ưu trải nghiệm người dùng Premium và đảm bảo tính ổn định của hệ thống.
 **FRs covered:** FR13, FR14.
 
-## Epic 1: Internal Service Bridge & NLP Interface
-Thiết lập kết nối bảo mật giữa Nowing và Vibe-Trading, đồng thời xây dựng khả năng bóc tách lệnh từ ngôn ngữ tự nhiên.
+### Epic 6: Generative Strategy Copilot (Phase 2)
+Tự động tạo mã thực thi chiến lược giao dịch từ yêu cầu ngôn ngữ tự nhiên.
+**FRs covered:** FR16.
+
+## Epic 1: Intelligent Trading Assistant & Secure Order Transmission
+Thiết lập kết nối bảo mật giữa Nowing và Vibe-Trading, bảo vệ tài sản và chiến lược cốt lõi của người dùng, đồng thời xây dựng khả năng bóc tách lệnh thông minh từ ngôn ngữ tự nhiên.
 
 ### Story 1.1: Secure Service-to-Service Bridge
 As a Nowing End-User,
@@ -128,8 +132,8 @@ So that I can show the user what the AI understood before running a heavy backte
 **Then** Vibe-Trading returns a summary of the strategy and a "Confidence Score"
 **And** the latency for this response is < 500ms
 
-## Epic 2: Multi-Market Async Execution Engine
-Xây dựng hệ thống hàng đợi Redis/Celery cho backtest đa thị trường.
+## Epic 2: Crypto-Native Async Execution Engine (Phase 1)
+Xây dựng hệ thống hàng đợi Redis/Celery cho backtest chuyên biệt Crypto (Mở rộng đa thị trường ở Phase 2).
 
 ### Story 2.1: Async Job Queue with Redis/Celery
 As a Trader,
@@ -142,15 +146,16 @@ So that I can continue interacting with the AI assistant or submit other tasks w
 **Then** it enqueues a job to Redis and returns a unique `job_id` immediately
 **And** a background Celery worker picks up the job for execution
 
-### Story 2.2: Multi-Market Data Loading System
+### Story 2.2: Crypto-First Data Loading System
 As a Trader,
-I want the system to automatically fetch data from yfinance (US), AKShare (VN), or CCXT (Crypto) based on the asset symbol,
-So that I can backtest any strategy across different global markets.
+I want the system to prioritize fetching data via CCXT and On-chain RPCs for Crypto assets, while maintaining an open architecture for future VN/US stock expansion,
+So that I can seamlessly backtest high-frequency crypto strategies without data latency.
 
 **Acceptance Criteria:**
-**Given** a valid symbol (e.g., "VNM", "AAPL", "BTC-USDT")
+**Given** a valid symbol (e.g., "BTC/USDT", "ETH/USDC")
 **When** the execution engine runs
-**Then** it correctly routes the request to the appropriate data provider
+**Then** it correctly routes the request to CCXT or a fallback RPC node
+**And** it gracefully ignores VN/US symbols (returning a "Phase 2 feature" error) if requested
 **And** it handles API rate limits using the built-in retry mechanism
 
 ### Story 2.3: 2-Year Lookback Constraint & Results Persistence
@@ -234,19 +239,7 @@ So that I can trust the AI and understand the "Why" before I trade.
 **Then** the Agent provides a clear explanation (e.g., "I reduced the timeframe because recent volatility suggests a shorter holding period is safer")
 **And** it cites specific metrics (Sharpe improvement, Max Drawdown reduction)
 
-### Story 3.4: Generative Strategy Copilot (P2)
-As a Quantitative Analyst,
-I want Nowing to auto-generate Python/PineScript execution code based on my natural language description,
-So that Vibe-Trading can run custom, complex logic directly without me writing the code.
-
-**Acceptance Criteria:**
-**Given** a natural language rule ("Buy when RSI < 30 and MACD crosses over")
-**When** Nowing processes the intent
-**Then** it generates valid execution code (e.g., Python `def next(self):`)
-**And** populates the `executable_code` field in the payload
-**And** Vibe-Trading correctly compiles/executes this code safely in the sandbox
-
-### Story 3.5: Walk-Forward Analysis (WFA)
+### Story 3.4: Walk-Forward Analysis (WFA)
 As a Quant Analyst,
 I want the system to perform Walk-Forward Analysis during strategy optimization,
 So that I can ensure my strategy works on unseen data and isn't overfitted to the past.
@@ -268,7 +261,8 @@ So that I can visually inspect where my strategy bought and sold.
 **Acceptance Criteria:**
 **Given** a successful backtest run
 **When** Nowing receives the `price_series` and `trade_markers`
-**Then** it renders an interactive ECharts dashboard
+**Then** it returns a specific JSON payload structured for the ECharts UI component (including datasets for candlesticks, equity curve line, and scatter points for markers)
+**And** Nowing renders an interactive ECharts dashboard
 **And** users can hover over markers to see trade details (Price, PnL, Date)
 
 ### Story 4.2: "Verified Data" PDF Report Generation
@@ -293,8 +287,8 @@ So that other users can discover, follow, or (optionally) subscribe to my strate
 **Then** the strategy and its verified metrics are added to the public discovery feed
 **And** other users can search and filter strategies by Sharpe ratio or Win rate
 
-## Epic 5: Governance & Performance Reliability
-Đảm bảo trải nghiệm người dùng mượt mà thông qua cơ chế ưu tiên, giám sát chất lượng dịch vụ và tự động mở rộng sức mạnh tính toán.
+## Epic 5: Premium User Experience & Enterprise Stability
+Đảm bảo trải nghiệm người dùng mượt mà, phân quyền ưu tiên cho người dùng Premium và bảo vệ tính ổn định của toàn bộ nền tảng giao dịch.
 
 ### Story 5.1: Tiered Priority Queue for Premium Users
 As a Business Owner (Victor),
@@ -328,3 +322,18 @@ So that my complex backtests and Monte Carlo simulations always complete within 
 **When** the cleanup cron job runs
 **Then** it deletes old files from the shared `/runs/` directory
 **And** additional Celery worker containers are spun up automatically when the queue length > 10
+
+## Epic 6: Generative Strategy Copilot (Phase 2)
+Tự động tạo mã thực thi chiến lược giao dịch từ yêu cầu ngôn ngữ tự nhiên.
+
+### Story 6.1: Generative Strategy Copilot (P2)
+As a Quantitative Analyst,
+I want Nowing to auto-generate Python/PineScript execution code based on my natural language description,
+So that Vibe-Trading can run custom, complex logic directly without me writing the code.
+
+**Acceptance Criteria:**
+**Given** a natural language rule ("Buy when RSI < 30 and MACD crosses over")
+**When** Nowing processes the intent
+**Then** it generates valid execution code (e.g., Python `def next(self):`)
+**And** populates the `executable_code` field in the payload
+**And** Vibe-Trading correctly compiles/executes this code safely in the sandbox

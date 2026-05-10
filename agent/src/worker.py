@@ -16,13 +16,20 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
+    result_expires=3600,  # Results expire in 1 hour to prevent Redis OOM
     task_routes={
         "src.worker.run_backtest_job": {"queue": "backtest"},
         "src.worker.*": {"queue": "default"},
     },
 )
 
-@celery_app.task(name="src.worker.run_backtest_job", bind=True, autoretry_for=(Exception,), retry_backoff=True, max_retries=3)
+@celery_app.task(
+    name="src.worker.run_backtest_job", 
+    bind=True, 
+    autoretry_for=(ConnectionError, TimeoutError), # Only retry on transient network/broker errors
+    retry_backoff=True, 
+    max_retries=3
+)
 def run_backtest_job(self, payload: dict) -> dict:
     """
     Background task to run a backtest job.

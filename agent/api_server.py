@@ -392,14 +392,19 @@ def _get_allowed_networks() -> List[ipaddress._BaseNetwork]:
     return _cached_allowed_ips
 
 def _is_ip_whitelisted(request: Request) -> bool:
-    """Check if the request originates from a whitelisted IP."""
+    """Check if the request originates from a whitelisted IP.
+    
+    Security Note: We only trust X-Forwarded-For if explicitly configured 
+    via IP_WHITELIST_TRUST_PROXY=1. Otherwise, we use the direct client host.
+    """
     allowed = _get_allowed_networks()
     if not allowed:
         return False
     
-    # Support X-Forwarded-For proxy masking
+    trust_proxy = _env_flag_enabled("IP_WHITELIST_TRUST_PROXY")
     forwarded_for = request.headers.get("x-forwarded-for")
-    if forwarded_for:
+    
+    if trust_proxy and forwarded_for:
         host = forwarded_for.split(",")[0].strip()
     else:
         host = request.client.host if request.client else ""
@@ -1185,7 +1190,7 @@ async def health_check():
 @app.post("/jobs", dependencies=[Depends(require_auth)])
 async def create_job(payload: VibeTradingJobPayload):
     """Validate incoming payload and enqueue a job."""
-    from agent.src.worker import run_backtest_job
+    from src.worker import run_backtest_job
     try:
         task = await asyncio.to_thread(
             run_backtest_job.apply_async,

@@ -48,9 +48,9 @@ development_status:
   1-3-strategy-preview-api: done
   epic-1-retrospective: optional
 
-  epic-2: backlog
+  epic-2: in-progress
   2-1-async-job-queue-with-redis-celery: done
-  2-2-multi-market-data-loading-system: backlog
+  2-2-multi-market-data-loading-system: in-progress
   2-3-2-year-lookback-constraint-results-persistence: backlog
   2-4-monte-carlo-stress-test: backlog
   2-5-defi-native-simulation-environment: backlog
