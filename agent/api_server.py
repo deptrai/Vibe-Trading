@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Security, UploadFile, status
+from src.api_models import VibeTradingJobPayload, PreviewResponse
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -346,19 +347,71 @@ def _validate_api_auth(
     allow_query: bool = False,
 ) -> None:
     """Validate configured auth, preserving loopback-only dev mode."""
-    api_key = _configured_api_key()
-    if not api_key:
-        if _is_local_client(request):
-            return
+    
+    is_whitelisted = _is_local_client(request) or _is_ip_whitelisted(request)
+    
+    if not is_whitelisted:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="API_AUTH_KEY is required for non-local API access",
+            detail="Access denied from this IP",
         )
+
+    api_key = _configured_api_key()
+    if not api_key:
+        return
 
     token = _auth_credential_from_header_or_query(cred, query_api_key, allow_query=allow_query)
     if not token or not hmac.compare_digest(token, api_key):
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
+
+# Cache the allowed IP networks to avoid parsing on every request
+_cached_allowed_ips: Optional[List[ipaddress._BaseNetwork]] = None
+
+def _get_allowed_networks() -> List[ipaddress._BaseNetwork]:
+    global _cached_allowed_ips
+    if _cached_allowed_ips is not None:
+        return _cached_allowed_ips
+        
+    allowed_ips_str = os.getenv("ALLOWED_IPS")
+    if not allowed_ips_str:
+        _cached_allowed_ips = []
+        return _cached_allowed_ips
+        
+    networks = []
+    for addr in allowed_ips_str.split(","):
+        addr = addr.strip()
+        if not addr:
+            continue
+        try:
+            networks.append(ipaddress.ip_network(addr, strict=False))
+        except ValueError:
+            pass # Gracefully ignore malformed entries
+            
+    _cached_allowed_ips = networks
+    return _cached_allowed_ips
+
+def _is_ip_whitelisted(request: Request) -> bool:
+    """Check if the request originates from a whitelisted IP."""
+    allowed = _get_allowed_networks()
+    if not allowed:
+        return False
+    
+    # Support X-Forwarded-For proxy masking
+    forwarded_for = request.headers.get("x-forwarded-for")
+    if forwarded_for:
+        host = forwarded_for.split(",")[0].strip()
+    else:
+        host = request.client.host if request.client else ""
+        
+    if not host:
+        return False
+        
+    try:
+        ip = ipaddress.ip_address(host)
+        return any(ip in net for net in allowed)
+    except (ValueError, TypeError):
+        return False
 
 def _is_local_client(request: Request) -> bool:
     """Return whether the request originates from a loopback client."""
@@ -431,16 +484,20 @@ async def require_local_or_auth(
     """Protect settings access when dev-mode auth is disabled.
 
     If API_AUTH_KEY is configured, require the bearer token. If not, allow only
-    loopback clients so an API server bound to 0.0.0.0 cannot accept remote
-    credential reads or writes in dev mode.
+    loopback clients or whitelisted IPs so an API server bound to 0.0.0.0 
+    cannot accept remote credential reads or writes in dev mode.
     """
+    is_whitelisted = _is_local_client(request) or _is_ip_whitelisted(request)
+    
     if _configured_api_key():
+        # require_auth will also validate the IP via _validate_api_auth internally
         await require_auth(request, cred)
         return
-    if not _is_local_client(request):
+        
+    if not is_whitelisted:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Settings access requires API_AUTH_KEY or a local loopback client",
+            detail="Settings access requires API_AUTH_KEY, local loopback client, or whitelisted IP",
         )
 
 
@@ -1122,6 +1179,45 @@ async def health_check():
         status="healthy",
         service="Vibe-Trading API",
         timestamp=datetime.now().isoformat()
+    )
+
+
+@app.post("/jobs", dependencies=[Depends(require_auth)])
+async def create_job(payload: VibeTradingJobPayload):
+    """Validate incoming payload and enqueue a job."""
+    from agent.src.worker import run_backtest_job
+    try:
+        task = await asyncio.to_thread(
+            run_backtest_job.apply_async,
+            args=[payload.model_dump(mode="json")],
+            queue="backtest"
+        )
+        return {"status": "accepted", "job_id": task.id}
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Job queue is currently unavailable"
+        )
+
+@app.post("/preview", response_model=PreviewResponse, dependencies=[Depends(require_auth)])
+async def preview_strategy(payload: VibeTradingJobPayload):
+    """Generate a summary and confidence score for a strategy payload."""
+    assets = ", ".join(payload.context_rules.assets) if payload.context_rules.assets else "Any Asset"
+    timeframe = payload.context_rules.timeframe
+    
+    indicators = ", ".join(payload.context_rules.indicators) if payload.context_rules.indicators else "Price Action"
+    strategy_desc = "Strategy"
+    if payload.context_rules.natural_language_rules:
+        nl_rules = payload.context_rules.natural_language_rules
+        strategy_desc = nl_rules[:50] + ("..." if len(nl_rules) > 50 else "")
+    
+    position_pct = float(payload.risk_management.position_sizing) * 100
+    summary = f"{strategy_desc} using {indicators} on {assets} ({timeframe}) with {position_pct:g}% position sizing"
+    
+    # Placeholder for confidence calculation logic
+    return PreviewResponse(
+        summary=summary,
+        confidence_score=0.95
     )
 
 

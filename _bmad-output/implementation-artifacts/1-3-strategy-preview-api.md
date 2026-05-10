@@ -1,59 +1,81 @@
+---
+story_id: '1.3'
+story_key: '1-3-strategy-preview-api'
+epic_num: 1
+story_num: 3
+title: 'Strategy Preview API'
+status: 'in-progress'
+---
+
 # Story 1.3: Strategy Preview API
 
-## 1. Story Foundation
-**User Story:** 
-As a Frontend Developer,
-I want a lightweight API endpoint to generate preview data for the Strategy Card,
-So that I can show the user what the AI understood before running a heavy backtest.
+## User Story
+**As a** Frontend Developer,
+**I want** a lightweight API endpoint to generate preview data for the Strategy Card,
+**So that** I can show the user what the AI understood before running a heavy backtest.
 
-**Acceptance Criteria:**
-* **Given** extracted parameters from Story 1.2
-* **When** Nowing calls the `/preview` endpoint
-* **Then** Vibe-Trading returns a summary of the strategy and a "Confidence Score"
-* **And** the latency for this response is < 500ms
+## Acceptance Criteria
+1. **Given** extracted parameters from Story 1.2
+   **When** Nowing calls the `/preview` endpoint with a valid `VibeTradingJobPayload`
+   **Then** Vibe-Trading returns a `PreviewResponse` containing a summary of the strategy and a "Confidence Score".
+2. **Given** the preview request
+   **When** processing the payload
+   **Then** the response latency must be < 500ms.
+3. **Given** a confidence threshold
+   **When** the confidence score is below 0.9
+   **Then** Nowing will use this data to display the Strategy Preview Card for user confirmation.
 
-**Business Value:**
-Provides immediate visual feedback to the user, confirming that the AI has correctly interpreted their natural language prompt before initiating a computationally expensive backtest. This is crucial for the "Zero-Technical Friction" differentiator.
+## Tasks / Subtasks
 
-## 2. Developer Context
-**Current State & Motivation:**
-Nowing parses natural language into a strict JSON payload. We need a fast API on the Vibe-Trading execution engine side to receive this payload and return a "Strategy Preview Card" summary, including a confidence score, so Nowing can display it to the user.
+- [ ] Task 1: Implement the `/preview` endpoint (AC: 1, 2)
+  - [ ] Subtask 1.1: Define `PreviewResponse` Pydantic model in `agent/src/api_models.py`.
+  - [ ] Subtask 1.2: Add a `POST /preview` route in `agent/api_server.py`.
+  - [ ] Subtask 1.3: Implement logic to generate a human-readable summary from the `VibeTradingJobPayload`.
+- [ ] Task 2: Implement confidence score logic (AC: 1, 3)
+  - [ ] Subtask 2.1: Implement a placeholder logic to calculate/return a `confidence_score`.
+  - [ ] Subtask 2.2: Ensure the endpoint uses the `require_auth` dependency.
+- [ ] Task 3: Testing and Validation (AC: 1, 2)
+  - [ ] Subtask 3.1: Write integration tests in `agent/tests/test_strategy_preview.py`.
+  - [ ] Subtask 3.2: Verify response time is consistently under 500ms.
 
-**Specific Modifications Required:**
-* Create a new lightweight, synchronous REST API endpoint (`/preview`) in the Vibe-Trading backend (likely FastAPI/Python or similar based on existing architecture, though architecture mentions FastAPI for APIs).
-* This endpoint must accept the `VibeTradingJobPayload` schema (or a subset of it).
-* The endpoint logic needs to analyze the input and calculate/return a "Confidence Score" (e.g., indicating how fully the parameters were resolved) alongside a summary of the strategy to be executed.
-* The endpoint must be optimized to return within 500ms.
+## Dev Notes
 
-**What Must Be Preserved:**
-* Existing authentication and security middleware (IP Whitelisting, AES-256 for storage if applicable here, TLS/SSL) must apply to this new endpoint.
+### 🔬 Exhaustive Analysis & Guardrails
 
-## 3. Technical Requirements
+- **Performance:** This is a synchronous, high-priority endpoint. Avoid any heavy computations or external API calls during preview generation.
+- **Validation:** Reuse the `VibeTradingJobPayload` defined in Story 1.2.
+- **Summary Logic:** The summary should be concise but descriptive enough for a "Strategy Card" (e.g., "Long RSI Strategy on BTC-USDT (1h)").
 
-### Architecture Compliance
-* **Integration Pattern:** Adhere to the "Microservice Specialist Worker" pattern. Nowing calls this API synchronously; it does *not* enqueue a job for Celery.
-* **Payload Schema:** The input must conform to the `VibeTradingJobPayload` structure discussed in the Architecture document (Simulation Environment, Risk Management, Context Rules).
-* **API Pattern:** Must be a synchronous, low-latency REST endpoint.
+### Project Structure Notes
+- Endpoint should be added to `agent/api_server.py`.
+- Models should stay in `agent/src/api_models.py`.
 
-### Library & Framework Requirements
-* Use the existing web framework established for Vibe-Trading APIs (e.g., FastAPI, Flask, Express - check existing codebase).
-* Response parsing/validation should utilize the standard schema validation library (e.g., Pydantic if Python/FastAPI, Zod if TypeScript).
+### References
+- [Source: _bmad-output/planning-artifacts/epics.md#Story 1.3: Strategy Preview API]
+- [Source: _bmad-output/planning-artifacts/architecture.md#1. Technical Components & Data Flow]
 
-### File Structure Requirements
-* Place the new route handler in the appropriate API routes directory.
-* Place the confidence scoring logic in an appropriate service or utility module.
+## Dev Agent Record
 
-### Testing Requirements
-* Unit tests for the confidence scoring logic.
-* Integration/API tests for the `/preview` endpoint verifying successful responses (200 OK) with valid payloads.
-* Tests verifying the < 500ms latency requirement (performance tests).
-* Tests verifying authentication/authorization (401 Unauthorized for invalid keys/IPs).
+### Agent Model Used
+(To be filled by dev agent)
 
-## 4. Project Context Reference
-* [PRD](../planning-artifacts/prd.md) - Section: Functional Requirements (FR2), Success Criteria.
-* [Architecture](../planning-artifacts/architecture.md) - Section 1: Technical Components & Data Flow, Section 5: Fulfillment of PRD Requirements.
-* [Epics](../planning-artifacts/epics.md) - Epic 1, Story 1.3.
+### Debug Log References
+(To be filled by dev agent)
 
-## 5. Story Completion Status
-**Status:** ready-for-dev
-**Note:** Ultimate context engine analysis completed - comprehensive developer guide created.
+### Completion Notes List
+(To be filled by dev agent)
+
+### File List
+(To be filled by dev agent)
+
+### Change Log
+(To be filled by dev agent)
+
+---
+**Status:** done
+
+### Review Findings
+- [x] [Review][Patch] Explicit Percentage Formatting & Empty Assets Fallback [agent/api_server.py:1193]
+- [x] [Review][Patch] Missing Auth Headers in Test Request [agent/tests/test_strategy_preview.py]
+- [x] [Review][Patch] Missing Response Latency Verification Test [agent/tests/test_strategy_preview.py]
+- [x] [Review][Patch] Inadequate Strategy Summary Generation [agent/api_server.py:1195]
