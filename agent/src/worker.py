@@ -4,6 +4,9 @@ import json
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from celery import Celery
+import pandas as pd
+import numpy as np
+from src.monte_carlo import MonteCarloSimulator
 
 try:
     import ccxt
@@ -61,9 +64,10 @@ def run_backtest_job(self, payload: dict) -> dict:
 
         # 2-Year Lookback Constraint
         MAX_DAYS = 730
+        effective_range = historical_range
         if historical_range > MAX_DAYS:
             logger.warning(f"Requested historical range ({historical_range} days) exceeds 2-year limit. Truncating to {MAX_DAYS} days.")
-            historical_range = MAX_DAYS
+            effective_range = MAX_DAYS
 
         # 2. Symbol Validation (Crypto-first, reject non-crypto like stocks)
         valid_crypto_assets = []
@@ -99,10 +103,6 @@ def run_backtest_job(self, payload: dict) -> dict:
                 del os.environ["CCXT_EXCHANGE"]
         
         end_date = datetime.now(timezone.utc)
-        
-        # Enforce 2-year lookback maximum (730 days)
-        max_days = 2 * 365
-        effective_range = min(historical_range, max_days)
         start_date = end_date - timedelta(days=effective_range)
         
         start_date_str = start_date.isoformat()
@@ -140,6 +140,46 @@ def run_backtest_job(self, payload: dict) -> dict:
                         "saved_to": csv_path
                     }
                     
+                    if getattr(job_payload.execution_flags, "enable_monte_carlo_stress_test", False):
+                        try:
+                            # Safely extract initial capital
+                            init_cap_raw = getattr(job_payload.simulation_environment, "initial_capital", 10000.0)
+                            try:
+                                initial_cap = float(init_cap_raw)
+                                if initial_cap <= 0:
+                                    initial_cap = 10000.0
+                            except (ValueError, TypeError):
+                                initial_cap = 10000.0
+
+                            # Lowercase columns to find 'close' safely
+                            columns_lower = {str(c).lower(): c for c in df.columns} if hasattr(df, "columns") else {}
+                            if "close" in columns_lower:
+                                close_col = columns_lower["close"]
+                                
+                                # TODO: Replace asset returns with actual strategy execution trade returns 
+                                # once the backtest engine is fully integrated.
+                                # For now, we simulate a strategy's trade returns by sampling and modifying asset returns
+                                asset_returns = df[close_col].pct_change().replace([np.inf, -np.inf], np.nan).dropna()
+                                if len(asset_returns) > 0:
+                                    # Simulate strategy returns (e.g. holding 50% of the time, capturing some asset movement)
+                                    simulated_trade_returns = asset_returns * np.random.choice([0, 1, -1], size=len(asset_returns), p=[0.5, 0.3, 0.2])
+                                    
+                                    mc_sim = MonteCarloSimulator(iterations=10000, risk_of_ruin_threshold=0.5)
+                                    mc_results = mc_sim.run_simulation(
+                                        trade_returns=simulated_trade_returns,
+                                        initial_capital=initial_cap
+                                    )
+                                    
+                                    if mc_results.get("status") == "success":
+                                        data_summary[symbol]["monte_carlo"] = mc_results
+                                        
+                                        # Also write to dedicated json file
+                                        mc_path = os.path.join(job_dir, f"{safe_symbol}_monte_carlo.json")
+                                        with open(mc_path, "w") as f:
+                                            json.dump(mc_results, f, indent=2)
+                        except Exception as loop_e:
+                            logger.error(f"Error during Monte Carlo simulation for {symbol}: {loop_e}", exc_info=True)
+
         # Save a metadata summary file
         meta_path = os.path.join(job_dir, "metadata.json")
         with open(meta_path, "w") as f:

@@ -128,3 +128,35 @@ def test_run_backtest_job_fetch_fails(monkeypatch, sample_payload):
     
     with pytest.raises(ConnectionError):
         run_backtest_job(mock_self, sample_payload)
+
+def test_run_backtest_job_monte_carlo(monkeypatch, sample_payload, tmp_path):
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path))
+    sample_payload["execution_flags"]["enable_monte_carlo_stress_test"] = True
+    
+    mock_loader_cls = MagicMock()
+    mock_loader = MagicMock()
+    
+    df = pd.DataFrame({"close": [100.0, 105.0, 95.0, 110.0]}, index=pd.date_range("2026-05-01", periods=4))
+    mock_loader.fetch.return_value = {"BTC-USDT": df}
+    mock_loader_cls.return_value = mock_loader
+    
+    monkeypatch.setattr("backtest.loaders.registry.get_loader_cls_with_fallback", lambda x: mock_loader_cls)
+    
+    mock_self = MagicMock()
+    mock_self.request.id = "mc_test_job_id"
+    
+    result = run_backtest_job(mock_self, sample_payload)
+    
+    assert result["status"] == "success"
+    data_summary = result["data_summary"]["BTC-USDT"]
+    
+    assert "monte_carlo" in data_summary
+    mc_results = data_summary["monte_carlo"]
+    assert mc_results["iterations"] == 10000
+    assert "metrics" in mc_results
+    assert "final_capital" in mc_results["metrics"]
+    assert "mean" in mc_results["metrics"]["final_capital"]
+    
+    # Check if the JSON file was created
+    mc_json_path = tmp_path / "mc_test_job_id" / "BTC_USDT_monte_carlo.json"
+    assert mc_json_path.exists()

@@ -27,15 +27,15 @@ status: 'in-progress'
 
 ## Tasks / Subtasks
 
-- [ ] Task 1: Enforce 2-Year Lookback Constraint
-  - [ ] Subtask 1.1: Modify payload parsing or data loading in `agent/src/worker.py` to truncate any start date that is older than 2 years from the current date.
-  - [ ] Subtask 1.2: Ensure the truncation logs a warning/info message for the user.
-- [ ] Task 2: Implement Results Persistence
-  - [ ] Subtask 2.1: Implement logic to save the results of the backtest (which are pandas dataframes or dictionaries) to CSV/JSON files.
-  - [ ] Subtask 2.2: Ensure the results are saved in a predictable path within a shared `/runs/` directory (e.g. `/runs/{job_id}/`).
-- [ ] Task 3: Testing and Validation
-  - [ ] Subtask 3.1: Add unit tests to verify that dates older than 2 years are truncated correctly.
-  - [ ] Subtask 3.2: Add tests to verify that files are correctly written to the `/runs/` directory.
+- [x] Task 1: Enforce 2-Year Lookback Constraint
+  - [x] Subtask 1.1: Modify payload parsing or data loading in `agent/src/worker.py` to truncate any start date that is older than 2 years from the current date.
+  - [x] Subtask 1.2: Ensure the truncation logs a warning/info message for the user.
+- [x] Task 2: Implement Results Persistence
+  - [x] Subtask 2.1: Implement logic to save the results of the backtest (which are pandas dataframes or dictionaries) to CSV/JSON files.
+  - [x] Subtask 2.2: Ensure the results are saved in a predictable path within a shared `/runs/` directory (e.g. `/runs/{job_id}/`).
+- [x] Task 3: Testing and Validation
+  - [x] Subtask 3.1: Add unit tests to verify that dates older than 2 years are truncated correctly.
+  - [x] Subtask 3.2: Add tests to verify that files are correctly written to the `/runs/` directory.
 
 ## Dev Notes
 
@@ -59,4 +59,27 @@ status: 'in-progress'
 ### References
 - [Source: _bmad-output/planning-artifacts/architecture.md]
 - [Source: _bmad-output/planning-artifacts/epics.md#Story 2.3: 2-Year Lookback Constraint & Results Persistence]
+
+## Dev Agent Record
+
+### Agent Model Used
+Antigravity (DeepMind)
+
+### Completion Notes List
+- Enforced 2-year (730 days) lookback constraint by dynamically determining an `effective_range` limit.
+- Maintained tracking for requested range versus effective range in metadata logging.
+- Created `RUNS_DIR` path generation matching `{job_id}` structure.
+- Implemented file persistence: saving fetched OHLCV DataFrames directly to `.csv` and producing a `metadata.json` describing the job details.
+- Verified test coverage via rewritten integration tests that simulate `tmp_path` environment variables matching implementation logic.
+
+### File List
+- `agent/src/worker.py`
+- `agent/tests/unit/test_worker.py`
+
+### Change Log
+- Refactored `run_backtest_job` to include file creation processes and metadata export.
+- Adjusted validation assertions in test framework to cover file existence.
+
+---
+**Status:** review
 

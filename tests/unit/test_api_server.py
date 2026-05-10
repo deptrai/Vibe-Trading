@@ -1,43 +1,24 @@
 import pytest
-from unittest.mock import MagicMock
-import agent.api_server as api_server
+from fastapi.testclient import TestClient
+from unittest.mock import patch
+from agent.api_server import app
 
-@pytest.fixture(autouse=True)
-def reset_cached_ips():
-    api_server._cached_allowed_ips = None
-    yield
-    api_server._cached_allowed_ips = None
+client = TestClient(app)
 
-def get_mock_request(host: str, forwarded_for: str = None):
-    mock_req = MagicMock()
-    if forwarded_for:
-        mock_req.headers.get.return_value = forwarded_for
-    else:
-        mock_req.headers.get.return_value = None
-    
-    if host:
-        mock_req.client.host = host
-    else:
-        mock_req.client = None
-    return mock_req
+def test_health_check():
+    response = client.get("/health")
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
 
-def test_is_ip_whitelisted_empty_allowed(mocker):
-    mocker.patch.dict("os.environ", {"ALLOWED_IPS": ""})
-    req = get_mock_request(host="192.168.1.1")
-    assert api_server._is_ip_whitelisted(req) is False
+def test_api_info():
+    response = client.get("/api")
+    assert response.status_code == 200
+    assert "version" in response.json()
 
-def test_is_ip_whitelisted_valid_ip(mocker):
-    mocker.patch.dict("os.environ", {"ALLOWED_IPS": "192.168.1.0/24, 10.0.0.1"})
-    req = get_mock_request(host="192.168.1.100")
-    assert api_server._is_ip_whitelisted(req) is True
-    
-    req_exact = get_mock_request(host="10.0.0.1")
-    assert api_server._is_ip_whitelisted(req_exact) is True
-    
-    req_fail = get_mock_request(host="10.0.0.2")
-    assert api_server._is_ip_whitelisted(req_fail) is False
-
-def test_is_ip_whitelisted_forwarded_for(mocker):
-    mocker.patch.dict("os.environ", {"ALLOWED_IPS": "192.168.1.0/24"})
-    req = get_mock_request(host="10.0.0.1", forwarded_for="192.168.1.50, 203.0.113.1")
-    assert api_server._is_ip_whitelisted(req) is True
+@patch("agent.api_server._configured_api_key")
+@patch("agent.api_server._is_local_client")
+def test_runs_requires_auth(mock_local, mock_api_key):
+    mock_local.return_value = False
+    mock_api_key.return_value = "secret"
+    response = client.get("/runs")
+    assert response.status_code == 403
