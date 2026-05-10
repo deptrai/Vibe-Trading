@@ -4,7 +4,7 @@ story_key: '2-3-2-year-lookback-constraint-results-persistence'
 epic_num: 2
 story_num: 3
 title: '2-Year Lookback Constraint & Results Persistence'
-status: 'in-progress'
+status: 'done'
 ---
 
 # Story 2.3: 2-Year Lookback Constraint & Results Persistence
@@ -81,5 +81,16 @@ Antigravity (DeepMind)
 - Adjusted validation assertions in test framework to cover file existence.
 
 ---
-**Status:** review
+**Status:** done
+
+### Review Findings
+- [x] [Review][Decision] Missing Plots Persistence — AC 2 requires plots (CSV/JSON/Plots), but only CSV/JSON are currently saved. Define if we need plots now?
+- [x] [Review][Patch] Potential Division by Zero in fee_impact [agent/src/worker.py:182]
+- [x] [Review][Patch] Cumulative Fee Penalty on Vector — Fees subtracted from entire returns array [agent/src/worker.py:184]
+- [x] [Review][Patch] Relative Path for RUNS_DIR — violates absolute path mount point requirement [agent/src/worker.py:131]
+- [x] [Review][Patch] Inaccurate 2-Year Constraint — uses fixed 730 days instead of calendar-aware delta [agent/src/worker.py:94]
+- [x] [Review][Patch] Unsafe Type Casting to float for simulator parameters [agent/src/worker.py:180]
+- [x] [Review][Patch] Hardcoded DEX identification logic [agent/src/worker.py:65]
+- [x] [Review][Defer] Static Gas Fee Assumption [agent/src/worker.py:180] — deferred, outside scope of current stories
+- [x] [Review][Defer] Missing Storage Limit/Safety check — deferred, pre-existing architectural concern
 

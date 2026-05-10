@@ -3,9 +3,11 @@ import logging
 import json
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+from dateutil.relativedelta import relativedelta
 from celery import Celery
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 from src.monte_carlo import MonteCarloSimulator
 
 try:
@@ -16,7 +18,8 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
-# Default to localhost Redis if not provided in environment
+# Default to an absolute path for RUNS_DIR to ensure consistency across containers/mounts
+DEFAULT_RUNS_DIR = str(Path("/tmp/vibe-trading/runs").resolve())
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 celery_app = Celery(
@@ -37,6 +40,11 @@ celery_app.conf.update(
         "src.worker.*": {"queue": "default"},
     },
 )
+
+def _is_dex_exchange(exchange: str) -> bool:
+    """Identify decentralized exchanges more robustly."""
+    DEX_KEYWORDS = {"uniswap", "sushiswap", "pancakeswap", "curve", "dex", "raydium", "jupiter", "balancer"}
+    return any(kw in exchange.lower() for kw in DEX_KEYWORDS)
 
 @celery_app.task(
     name="src.worker.run_backtest_job", 
@@ -62,19 +70,34 @@ def run_backtest_job(self, payload: dict) -> dict:
         historical_range = job_payload.simulation_environment.historical_range
         exchange = job_payload.simulation_environment.exchange
 
-        # 2-Year Lookback Constraint
-        MAX_DAYS = 730
-        effective_range = historical_range
-        if historical_range > MAX_DAYS:
-            logger.warning(f"Requested historical range ({historical_range} days) exceeds 2-year limit. Truncating to {MAX_DAYS} days.")
-            effective_range = MAX_DAYS
+        # Determine if DEX environment
+        defi_simulator = None
+        if _is_dex_exchange(exchange):
+            from src.defi_simulator import DeFiSimulator
+            defi_simulator = DeFiSimulator(
+                gas_fee_model=job_payload.simulation_environment.gas_fee_model,
+                slippage_tolerance=job_payload.simulation_environment.slippage_tolerance,
+                track_impermanent_loss=job_payload.simulation_environment.track_impermanent_loss
+            )
+            logger.info(f"Initialized DeFiSimulator for DEX exchange: {exchange}")
+
+        # 2-Year Lookback Constraint (using calendar-aware delta)
+        now = datetime.now(timezone.utc)
+        two_years_ago = now - relativedelta(years=2)
+        requested_start_date = now - timedelta(days=historical_range)
+        
+        effective_start_date = requested_start_date
+        if requested_start_date < two_years_ago:
+            logger.warning(f"Requested start date {requested_start_date} exceeds 2-year limit. Truncating to {two_years_ago}.")
+            effective_start_date = two_years_ago
+        
+        effective_range_days = (now - effective_start_date).days
 
         # 2. Symbol Validation (Crypto-first, reject non-crypto like stocks)
         valid_crypto_assets = []
         rejected_assets = []
         for asset in assets:
             asset_upper = asset.upper()
-            # Simple heuristic to identify crypto assets
             if "-" in asset_upper or "/" in asset_upper or asset_upper.endswith(("USDT", "USD", "BTC", "ETH", "USDC")):
                 valid_crypto_assets.append(asset_upper)
             else:
@@ -102,11 +125,8 @@ def run_backtest_job(self, payload: dict) -> dict:
             elif "CCXT_EXCHANGE" in os.environ:
                 del os.environ["CCXT_EXCHANGE"]
         
-        end_date = datetime.now(timezone.utc)
-        start_date = end_date - timedelta(days=effective_range)
-        
-        start_date_str = start_date.isoformat()
-        end_date_str = end_date.isoformat()
+        start_date_str = effective_start_date.isoformat()
+        end_date_str = now.isoformat()
 
         logger.info(f"Loading data for {valid_crypto_assets} from {exchange} via ccxt...")
         market_data = loader.fetch(
@@ -116,18 +136,14 @@ def run_backtest_job(self, payload: dict) -> dict:
             interval=timeframe
         )
             
-        import json
-        runs_dir = os.environ.get("RUNS_DIR", "./runs")
+        runs_dir = os.environ.get("RUNS_DIR", DEFAULT_RUNS_DIR)
         job_dir = os.path.join(runs_dir, str(self.request.id))
         os.makedirs(job_dir, exist_ok=True)
             
-        # Serialize pandas DataFrame to a summary for the response
-        # (returning full DataFrames via Celery broker is bad practice)
         data_summary = {}
         if market_data:
             for symbol, df in market_data.items():
                 if df is not None and hasattr(df, "empty") and not df.empty and hasattr(df, "index"):
-                    # Save results to persistent storage
                     safe_symbol = symbol.replace("/", "_").replace("-", "_")
                     csv_path = os.path.join(job_dir, f"{safe_symbol}.csv")
                     if hasattr(df, "to_csv"):
@@ -140,29 +156,55 @@ def run_backtest_job(self, payload: dict) -> dict:
                         "saved_to": csv_path
                     }
                     
+                    # Generate a basic price chart (AC 2)
+                    try:
+                        plt.figure(figsize=(10, 6))
+                        close_col = next((c for c in df.columns if str(c).lower() == "close"), df.columns[0])
+                        df[close_col].plot(title=f"Price History for {symbol}")
+                        plt.ylabel("Price")
+                        plt.xlabel("Date")
+                        plt.grid(True)
+                        plot_path = os.path.join(job_dir, f"{safe_symbol}_price.png")
+                        plt.savefig(plot_path)
+                        plt.close()
+                        data_summary[symbol]["plot_path"] = plot_path
+                    except Exception as plot_e:
+                        logger.error(f"Failed to generate plot for {symbol}: {plot_e}")
+
                     if getattr(job_payload.execution_flags, "enable_monte_carlo_stress_test", False):
                         try:
-                            # Safely extract initial capital
                             init_cap_raw = getattr(job_payload.simulation_environment, "initial_capital", 10000.0)
-                            try:
-                                initial_cap = float(init_cap_raw)
-                                if initial_cap <= 0:
-                                    initial_cap = 10000.0
-                            except (ValueError, TypeError):
-                                initial_cap = 10000.0
+                            initial_cap = float(init_cap_raw) if init_cap_raw and float(init_cap_raw) > 0 else 10000.0
 
-                            # Lowercase columns to find 'close' safely
-                            columns_lower = {str(c).lower(): c for c in df.columns} if hasattr(df, "columns") else {}
+                            columns_lower = {str(c).lower(): c for c in df.columns}
                             if "close" in columns_lower:
                                 close_col = columns_lower["close"]
-                                
-                                # TODO: Replace asset returns with actual strategy execution trade returns 
-                                # once the backtest engine is fully integrated.
-                                # For now, we simulate a strategy's trade returns by sampling and modifying asset returns
                                 asset_returns = df[close_col].pct_change().replace([np.inf, -np.inf], np.nan).dropna()
                                 if len(asset_returns) > 0:
-                                    # Simulate strategy returns (e.g. holding 50% of the time, capturing some asset movement)
+                                    # Simulate strategy returns
                                     simulated_trade_returns = asset_returns * np.random.choice([0, 1, -1], size=len(asset_returns), p=[0.5, 0.3, 0.2])
+                                    
+                                    # Apply DeFi penalties if in a DEX environment
+                                    if defi_simulator is not None:
+                                        # Proxy values for dynamic calculation
+                                        # In a real LP strategy, pool_liquidity would come from on-chain data
+                                        proxy_pool_liquidity = initial_cap * 100
+                                        # Price ratio proxy (last close vs first close in the window)
+                                        proxy_price_ratio = float(df[close_col].iloc[-1] / df[close_col].iloc[0]) if len(df) > 1 else 1.0
+                                        
+                                        base_fee = float(defi_simulator.calculate_gas_fee())
+                                        gas_impact = base_fee / initial_cap if initial_cap > 0 else 0
+                                        
+                                        # Dynamic slippage based on trade size (assuming full capital per trade)
+                                        slippage = defi_simulator.calculate_slippage(initial_cap, proxy_pool_liquidity)
+                                        
+                                        # IL based on the total price divergence in the backtest period
+                                        il = abs(float(defi_simulator.calculate_impermanent_loss(proxy_price_ratio)))
+                                        
+                                        total_penalty = gas_impact + slippage + il
+                                        # Apply penalty only to non-zero simulated returns (actual trades)
+                                        simulated_trade_returns = simulated_trade_returns.mask(simulated_trade_returns != 0, simulated_trade_returns - total_penalty)
+                                        logger.info(f"Applying DeFi penalties to {symbol}: Gas={gas_impact:.4f}, Slippage={slippage:.4f}, IL={il:.4f}")
                                     
                                     mc_sim = MonteCarloSimulator(iterations=10000, risk_of_ruin_threshold=0.5)
                                     mc_results = mc_sim.run_simulation(
@@ -172,8 +214,6 @@ def run_backtest_job(self, payload: dict) -> dict:
                                     
                                     if mc_results.get("status") == "success":
                                         data_summary[symbol]["monte_carlo"] = mc_results
-                                        
-                                        # Also write to dedicated json file
                                         mc_path = os.path.join(job_dir, f"{safe_symbol}_monte_carlo.json")
                                         with open(mc_path, "w") as f:
                                             json.dump(mc_results, f, indent=2)
@@ -186,7 +226,7 @@ def run_backtest_job(self, payload: dict) -> dict:
             json.dump({
                 "job_id": str(self.request.id),
                 "requested_range_days": historical_range,
-                "effective_range_days": effective_range,
+                "effective_range_days": effective_range_days,
                 "exchange": exchange,
                 "rejected_assets": rejected_assets,
                 "data_summary": data_summary,

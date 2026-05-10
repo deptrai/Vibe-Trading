@@ -5,3 +5,7 @@
 - Large payload bloating Redis broker [agent/api_server.py:1189] — deferred, payload is currently small configuration only
 ## Deferred from: code review of 2-2-multi-market-data-loading-system.md (2026-05-10)
 - Flawed Asset Classification Heuristic (`endswith("USD")` etc.) [agent/src/worker.py:19] — deferred, pre-existing
+
+## Deferred from: code review of 2-3-2-year-lookback-constraint-results-persistence.md (2026-05-10)
+- Static Gas Fee Assumption [agent/src/worker.py:180] — Current logic uses a static gas fee instead of dynamic/market-based estimation.
+- Missing Storage Limit/Safety check — The system does not verify disk space before saving large CSV files.
