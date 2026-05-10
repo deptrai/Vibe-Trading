@@ -65,11 +65,6 @@ def test_rl_optimizer_parameter_bounds():
         empty_data = {"BTC/USDT": pd.DataFrame()}
         result = optimizer.optimize(market_data=empty_data)
         
-        # Best score should be 0 since no returns
-        assert result["best_score"] == 0.0
-        
-        # Check trial params are within bounds
-        for trial in result["trial_history"]:
-            p = trial["params"]
-            assert 5 <= p["rsi_period"] <= 30
-            assert 0.01 <= p["stop_loss_pct"] <= 0.10
+        # Should return error status due to data validation guard
+        assert result["status"] == "error"
+        assert "Market data is empty" in result["message"]

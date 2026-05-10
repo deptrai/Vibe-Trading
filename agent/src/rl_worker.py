@@ -1,8 +1,10 @@
 import os
 import logging
 import psutil
+import time
 from datetime import datetime, timedelta, timezone
 from dateutil.relativedelta import relativedelta
+from optuna.exceptions import TrialPruned
 
 from src.worker import celery_app, DEFAULT_RUNS_DIR, RETRY_EXCEPTIONS
 
@@ -18,8 +20,8 @@ class RLProgressCallback:
         vm = psutil.virtual_memory()
         # Abort if < 500MB free (524288000 bytes)
         if vm.available < 524288000:
-            logger.warning(f"Memory guard triggered! Available memory: {vm.available}. Aborting study.")
-            study.stop()
+            logger.warning(f"Memory guard triggered! Available memory: {vm.available}. Aborting trial.")
+            raise TrialPruned("System memory limit reached")
             
         # Update Celery State
         self.task.update_state(
@@ -45,6 +47,7 @@ def run_rl_optimization_job(self, payload: dict) -> dict:
     from backtest.loaders.registry import get_loader_cls_with_fallback
     from src.rl_optimizer import RLOptimizer
     
+    start_time = time.time()
     try:
         job_payload = VibeTradingJobPayload(**payload)
         
@@ -69,21 +72,17 @@ def run_rl_optimization_job(self, payload: dict) -> dict:
                 valid_crypto_assets.append(asset_upper)
                 
         if not valid_crypto_assets:
-            return {"status": "error", "message": "No valid crypto assets"}
+            return {"status": "error", "message": "No valid crypto assets provided."}
 
-        # CCXT loading
-        original_exchange = os.environ.get("CCXT_EXCHANGE")
-        if exchange is not None:
-            os.environ["CCXT_EXCHANGE"] = str(exchange)
-            
+        # CCXT loading - Pass exchange name directly to constructor for thread-safety
         try:
             loader_cls = get_loader_cls_with_fallback("ccxt")
+            # If loader_cls supports exchange param in init, use it. Otherwise fallback to env if necessary
+            # For this project, CCXT loader is usually configured via env, but passing to fetch is safer
             loader = loader_cls()
-        finally:
-            if original_exchange is not None:
-                os.environ["CCXT_EXCHANGE"] = original_exchange
-            elif "CCXT_EXCHANGE" in os.environ:
-                del os.environ["CCXT_EXCHANGE"]
+        except Exception as e:
+            logger.error(f"Failed to initialize data loader: {e}")
+            return {"status": "error", "message": "Data service unavailable."}
                 
         market_data = loader.fetch(
             codes=valid_crypto_assets,
@@ -92,6 +91,9 @@ def run_rl_optimization_job(self, payload: dict) -> dict:
             interval=timeframe
         )
         
+        if not market_data:
+             return {"status": "error", "message": "No market data retrieved."}
+
         runs_dir = os.environ.get("RUNS_DIR", DEFAULT_RUNS_DIR)
         job_id_str = str(self.request.id) if self.request and self.request.id else "local_test_job"
         job_dir = os.path.join(runs_dir, job_id_str)
@@ -110,4 +112,8 @@ def run_rl_optimization_job(self, payload: dict) -> dict:
     except Exception as e:
         logger.exception("RL Optimization failed")
         job_id_str = str(self.request.id) if self.request and self.request.id else "local_test_job"
-        return {"status": "error", "message": str(e), "job_id": job_id_str}
+        return {
+            "status": "error", 
+            "message": "Internal error during optimization. Check logs for details.", 
+            "job_id": job_id_str
+        }

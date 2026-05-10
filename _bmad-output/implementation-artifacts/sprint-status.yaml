@@ -1,5 +1,5 @@
 # generated: 2026-05-05
-# last_updated: 2026-05-10
+# last_updated: 2026-05-11
 # project: Vibe-Trading Integration (Nowing)
 # project_key: NOKEY
 # tracking_system: file-system
@@ -18,6 +18,7 @@
 #
 # Story Status:
 #   - backlog: Story only exists in epic file
+#   - pending: Story paused/deferred (e.g., waiting for frontend)
 #   - in-progress: Story file created in stories folder
 #   - in-progress: Developer actively working on implementation
 #   - review: Ready for code review (via Dev's code-review workflow)
@@ -59,20 +60,20 @@ development_status:
 
   epic-3: in-progress
   3-1-offline-rl-strategy-tuner: done
-  3-2-knowledge-graph-integration-news-to-asset: backlog
+  3-2-knowledge-graph-integration-news-to-asset: in-progress
   3-3-explainable-ai-xai-for-strategy-changes: backlog
   3-4-walk-forward-analysis-wfa: backlog
   epic-3-retrospective: optional
 
   epic-4: backlog
-  4-1-interactive-multi-chart-visualization: backlog
-  4-2-verified-data-pdf-report-generation: backlog
-  4-3-strategy-marketplace-publish-discovery: backlog
+  4-1-interactive-multi-chart-visualization: pending
+  4-2-verified-data-pdf-report-generation: pending
+  4-3-strategy-marketplace-publish-discovery: pending
   epic-4-retrospective: optional
 
   epic-5: backlog
   5-1-tiered-priority-queue-for-premium-users: backlog
-  5-2-admin-monitoring-dashboard: backlog
+  5-2-admin-monitoring-dashboard: pending
   5-3-automated-cleanup-scaling-policy: backlog
   epic-5-retrospective: optional
 

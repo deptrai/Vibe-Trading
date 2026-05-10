@@ -1,0 +1,7 @@
+[
+  {"location": "agent/api_server.py:1217", "trigger_condition": "job_id from URL used directly in Path construction", "guard_snippet": "if '..' in job_id or not job_id.isalnum(): raise HTTPException(400)", "potential_consequence": "Path traversal vulnerability allowing access to sensitive files"},
+  {"location": "agent/src/rl_optimizer.py:12", "trigger_condition": "study.optimize runs without checking if market_data is empty", "guard_snippet": "if not market_data: return {'status': 'error', 'message': 'Empty data'}", "potential_consequence": "Optuna runtime crash or invalid results"},
+  {"location": "agent/src/rl_worker.py:75", "trigger_condition": "os.environ manipulation is not thread-safe", "guard_snippet": "loader = loader_cls(exchange=exchange)", "potential_consequence": "Race condition in multi-threaded workers causing wrong data load"},
+  {"location": "agent/src/rl_worker.py:21", "trigger_condition": "Memory guard doesn't stop current trial immediately", "guard_snippet": "raise TrialPruned('Memory limit')", "potential_consequence": "OOM crash if current trial consumes massive RAM"},
+  {"location": "agent/api_server.py:382", "trigger_condition": "X-Forwarded-For trust can be spoofed by client", "guard_snippet": "host = request.client.host # Use direct IP", "potential_consequence": "IP Whitelist bypass if proxy is misconfigured"}
+]

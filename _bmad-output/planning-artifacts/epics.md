@@ -336,7 +336,7 @@ So that I can ensure my strategy works on unseen data and isn't overfitted to th
 ## Epic 4: Advanced Reporting & Social Marketplace
 Hoàn thiện báo cáo PDF và hệ sinh thái chia sẻ chiến lược.
 
-### Story 4.1: Interactive Multi-Chart Visualization
+### Story 4.1: Interactive Multi-Chart Visualization [STATUS: PENDING - Frontend Only]
 As a Trader (Alex),
 I want to see an interactive Equity Curve and Candlestick chart with trade markers in Nowing,
 So that I can visually inspect where my strategy bought and sold.
@@ -353,7 +353,7 @@ So that I can visually inspect where my strategy bought and sold.
 **When** the chart payload is requested
 **Then** it returns a valid `ChartPayload` with an empty `trade_markers` array and a populated `equity_curve` (flat line at initial capital), without crashing the chart renderer
 
-### Story 4.2: "Verified Data" PDF Report Generation
+### Story 4.2: "Verified Data" PDF Report Generation [STATUS: PENDING - Frontend Only]
 As a Professional Investor,
 I want to export a comprehensive PDF report of my backtest with a "Verified Data" trust badge,
 So that I can share my results with partners knowing the data has been cross-checked.
@@ -369,7 +369,7 @@ So that I can share my results with partners knowing the data has been cross-che
 **When** PDF export is attempted
 **Then** the system aborts PDF generation and returns `{"error": "checksum_mismatch"}` — no unsigned PDF is produced or served
 
-### Story 4.3: Strategy Marketplace: Publish & Discovery
+### Story 4.3: Strategy Marketplace: Publish & Discovery [STATUS: PENDING - Frontend Only]
 As a Strategy Creator,
 I want to publish my successful backtest results to the Nowing Marketplace,
 So that other users can discover, follow, or (optionally) subscribe to my strategy.
@@ -430,7 +430,7 @@ So that I can monetize the platform effectively and provide better service to pa
 **When** the job is submitted
 **Then** it is routed to the standard queue (fail-safe default) and a warning is logged — the job is NOT rejected
 
-### Story 5.2: Admin Monitoring Dashboard
+### Story 5.2: Admin Monitoring Dashboard [STATUS: PENDING - Frontend Only]
 As a System Admin (Minh),
 I want a real-time dashboard to monitor API latency, cache hit rates, and worker health,
 So that I can proactively identify and resolve performance bottlenecks.

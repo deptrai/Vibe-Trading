@@ -4,9 +4,7 @@
 V5: ReAct Agent + async /run + CORS env + SSE tool events.
 """
 
-from __future__ import annotations
-
-import asyncio
+from __future__ import annotations\n\nimport asyncio\nimport logging
 import hmac
 import ipaddress
 import json
@@ -46,8 +44,7 @@ ENV_EXAMPLE_PATH = AGENT_DIR / ".env.example"
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
 _UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
 
-# Rich console for colored logs
-console = Console()
+# Rich console for colored logs\nconsole = Console()\nlogger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -1219,7 +1216,10 @@ async def create_job(payload: VibeTradingJobPayload):
 
 @app.get("/jobs/{job_id}/progress", dependencies=[Depends(require_auth)])
 async def get_job_progress(job_id: str):
-    """Poll for RL optimization progress."""
+    \"\"\"Poll for RL optimization progress.\"\"\"
+    if not job_id.isalnum():
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+        
     job_dir = RUNS_DIR / job_id
     progress_file = job_dir / "progress.json"
     
@@ -1228,7 +1228,7 @@ async def get_job_progress(job_id: str):
             data = json.loads(progress_file.read_text(encoding="utf-8"))
             return data
         except Exception:
-            pass
+            logger.error(f"Corrupted progress file for job {job_id}")
             
     # Try celery state if file not found
     try:

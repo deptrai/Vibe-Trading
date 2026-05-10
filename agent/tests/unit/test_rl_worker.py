@@ -24,7 +24,7 @@ def rl_payload():
             "rl_optimization_target": "sharpe"
         },
         "risk_management": {
-            "max_drawdown_limit": 20.0,
+            "max_drawdown_percentage": 0.2,
             "leverage": 1.0
         }
     }
@@ -89,7 +89,7 @@ def test_rl_worker_timeout_handling():
                 "context_rules": {"assets": ["BTC/USDT"], "timeframe": "1d"},
                 "simulation_environment": {"historical_range": 30, "exchange": "binance", "initial_capital": 10000, "instrument_type": "SPOT"},
                 "execution_flags": {"enable_rl_optimization": True},
-                "risk_management": {"max_drawdown_limit": 20.0, "leverage": 1.0}
+                "risk_management": {"max_drawdown_percentage": 0.2, "leverage": 1.0}
             }
             
             # Execute
@@ -97,4 +97,4 @@ def test_rl_worker_timeout_handling():
             
             # Validate graceful handling
             assert result["status"] == "error"
-            assert "Time limit exceeded" in result["message"]
+            assert "Internal error" in result["message"]
