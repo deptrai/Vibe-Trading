@@ -34,10 +34,23 @@ def test_ip_whitelist_proxy_header(monkeypatch):
     request = MagicMock()
     request.client.host = "10.0.0.1" # Proxy IP
     request.headers.get.side_effect = lambda k: "192.168.1.100, 203.0.113.1" if k == "x-forwarded-for" else None
-    
+
     with monkeypatch.context() as m:
         m.setenv("ALLOWED_IPS", "192.168.1.100")
+        m.setenv("IP_WHITELIST_TRUST_PROXY", "1")
         assert api_server._is_ip_whitelisted(request) == True
+
+
+def test_ip_whitelist_proxy_header_ignored_without_trust_flag(monkeypatch):
+    """X-Forwarded-For must be ignored unless IP_WHITELIST_TRUST_PROXY is enabled."""
+    request = MagicMock()
+    request.client.host = "10.0.0.1" # Proxy IP, not in whitelist
+    request.headers.get.side_effect = lambda k: "192.168.1.100" if k == "x-forwarded-for" else None
+
+    with monkeypatch.context() as m:
+        m.setenv("ALLOWED_IPS", "192.168.1.100")
+        # IP_WHITELIST_TRUST_PROXY intentionally unset
+        assert api_server._is_ip_whitelisted(request) == False
 
 def test_ip_whitelist_subnet_parsing(monkeypatch):
     request = MagicMock()

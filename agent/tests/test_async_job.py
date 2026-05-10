@@ -10,7 +10,7 @@ def client(monkeypatch):
     monkeypatch.setattr(api_server, "_API_KEY", "")
     return TestClient(app)
 
-@patch("agent.src.worker.run_backtest_job.apply_async")
+@patch("src.worker.run_backtest_job.apply_async")
 def test_async_job_enqueue(mock_apply_async, client):
     # Mock the Celery AsyncResult
     mock_task = MagicMock()

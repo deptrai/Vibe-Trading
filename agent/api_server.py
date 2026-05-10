@@ -279,13 +279,19 @@ async def _run_startup_preflight() -> None:
 # ============================================================================
 
 _security = HTTPBearer(auto_error=False)
+# Snapshot at import so tests can override via monkeypatch.setattr.
 _API_KEY = os.getenv("API_AUTH_KEY")
 _SHELL_TOOLS_ENV = "VIBE_TRADING_ENABLE_SHELL_TOOLS"
 _DOCKER_LOOPBACK_ENV = "VIBE_TRADING_TRUST_DOCKER_LOOPBACK"
 
 
 def _configured_api_key() -> str:
-    """Return the current API auth key, if configured."""
+    """Return the current API auth key, if configured.
+
+    Reads live from the environment so that updates via `_sync_runtime_env`
+    or test monkeypatches take effect without a restart. Falls back to the
+    module-level `_API_KEY` snapshot for tests that patch the attribute.
+    """
     return os.getenv("API_AUTH_KEY") or _API_KEY or ""
 
 
@@ -365,31 +371,30 @@ def _validate_api_auth(
         raise HTTPException(status_code=401, detail="Invalid or missing API key")
 
 
-# Cache the allowed IP networks to avoid parsing on every request
-_cached_allowed_ips: Optional[List[ipaddress._BaseNetwork]] = None
+# Cache the allowed IP networks. Keyed by the raw env string so a runtime
+# change to ALLOWED_IPS transparently invalidates the cache.
+_AllowedNetwork = ipaddress.IPv4Network | ipaddress.IPv6Network
+_cached_allowed_ips: Optional[tuple[str, List[_AllowedNetwork]]] = None
 
-def _get_allowed_networks() -> List[ipaddress._BaseNetwork]:
+def _get_allowed_networks() -> List[_AllowedNetwork]:
     global _cached_allowed_ips
-    if _cached_allowed_ips is not None:
-        return _cached_allowed_ips
-        
-    allowed_ips_str = os.getenv("ALLOWED_IPS")
-    if not allowed_ips_str:
-        _cached_allowed_ips = []
-        return _cached_allowed_ips
-        
-    networks = []
-    for addr in allowed_ips_str.split(","):
-        addr = addr.strip()
-        if not addr:
-            continue
-        try:
-            networks.append(ipaddress.ip_network(addr, strict=False))
-        except ValueError:
-            pass # Gracefully ignore malformed entries
-            
-    _cached_allowed_ips = networks
-    return _cached_allowed_ips
+    allowed_ips_str = os.getenv("ALLOWED_IPS", "")
+    if _cached_allowed_ips is not None and _cached_allowed_ips[0] == allowed_ips_str:
+        return _cached_allowed_ips[1]
+
+    networks: List[_AllowedNetwork] = []
+    if allowed_ips_str:
+        for addr in allowed_ips_str.split(","):
+            addr = addr.strip()
+            if not addr:
+                continue
+            try:
+                networks.append(ipaddress.ip_network(addr, strict=False))
+            except ValueError:
+                pass  # Gracefully ignore malformed entries
+
+    _cached_allowed_ips = (allowed_ips_str, networks)
+    return networks
 
 def _is_ip_whitelisted(request: Request) -> bool:
     """Check if the request originates from a whitelisted IP.
@@ -1190,19 +1195,55 @@ async def health_check():
 @app.post("/jobs", dependencies=[Depends(require_auth)])
 async def create_job(payload: VibeTradingJobPayload):
     """Validate incoming payload and enqueue a job."""
-    from src.worker import run_backtest_job
     try:
-        task = await asyncio.to_thread(
-            run_backtest_job.apply_async,
-            args=[payload.model_dump(mode="json")],
-            queue="backtest"
-        )
+        if getattr(payload.execution_flags, "enable_rl_optimization", False):
+            from src.rl_worker import run_rl_optimization_job
+            task = await asyncio.to_thread(
+                run_rl_optimization_job.apply_async,
+                args=[payload.model_dump(mode="json")],
+                queue="rl_optimization"
+            )
+        else:
+            from src.worker import run_backtest_job
+            task = await asyncio.to_thread(
+                run_backtest_job.apply_async,
+                args=[payload.model_dump(mode="json")],
+                queue="backtest"
+            )
         return {"status": "accepted", "job_id": task.id}
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Job queue is currently unavailable"
         )
+
+@app.get("/jobs/{job_id}/progress", dependencies=[Depends(require_auth)])
+async def get_job_progress(job_id: str):
+    """Poll for RL optimization progress."""
+    job_dir = RUNS_DIR / job_id
+    progress_file = job_dir / "progress.json"
+    
+    if progress_file.exists():
+        try:
+            data = json.loads(progress_file.read_text(encoding="utf-8"))
+            return data
+        except Exception:
+            pass
+            
+    # Try celery state if file not found
+    try:
+        from src.worker import celery_app
+        res = celery_app.AsyncResult(job_id)
+        if res.state == 'PROGRESS':
+            return res.info
+        elif res.state == 'SUCCESS':
+            return {"status": "completed"}
+        elif res.state == 'FAILURE':
+            return {"status": "failed", "error": str(res.info)}
+    except Exception:
+        pass
+        
+    return {"status": "pending_or_unknown"}
 
 @app.post("/preview", response_model=PreviewResponse, dependencies=[Depends(require_auth)])
 async def preview_strategy(payload: VibeTradingJobPayload):

@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 def test_real_data():
     payload = {
         "simulation_environment": {
-            "exchange": "binance",
+            "exchange": "uniswap",
             "instrument_type": "SPOT",
             "initial_capital": 10000.0,
             "trading_fees": 0.001,
@@ -27,7 +27,7 @@ def test_real_data():
             "timeframe": "1d"
         },
         "execution_flags": {
-            "enable_monte_carlo_stress_test": False,
+            "enable_monte_carlo_stress_test": True,
             "enable_rl_optimization": False
         }
     }

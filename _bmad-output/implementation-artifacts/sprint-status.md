@@ -1,38 +1,43 @@
 # Vibe-Trading Integration (Nowing) - Sprint Status
 
-**Last Updated:** 2026-05-05
+**Last Updated:** 2026-05-10
 
 ## Summary
 
-- **Total Epics:** 5
-- **Total Stories:** 15
-- **Epics In Progress:** 0
-- **Stories Completed:** 0
+- **Total Epics:** 6
+- **Total Stories:** 19
+- **Epics In Progress:** 1 (Epic 3)
+- **Epics Done (all stories complete):** 2 (Epic 1, Epic 2)
+- **Stories Completed:** 10
 
 ---
 
-## Epic 1: Internal Service Bridge & NLP Interface
-**Status:** 🏗️ In Progress
+## Epic 1: Intelligent Trading Assistant & Secure Order Transmission
+**Status:** ✅ Done
 
-- [ ] **1.1: Secure Service-to-Service Bridge** (🟢 Ready for Dev)
-- [ ] **1.2: Natural Language Parameter Extraction** (⚪ Backlog)
-- [ ] **1.3: Strategy Preview API** (⚪ Backlog)
+- [x] **1.1: Secure Service-to-Service Bridge** (🟢 Done)
+- [x] **1.2: Standardized Payload Schema & NLP Parameter Extraction** (🟢 Done)
+- [x] **1.3: Strategy Preview API** (🟢 Done)
 - [ ] **Epic 1 Retrospective** (⚪ Optional)
 
-## Epic 2: Multi-Market Async Execution Engine
-**Status:** ⚪ Backlog
+## Epic 2: Crypto-Native Async Execution Engine (Phase 1)
+**Status:** ✅ Done
 
-- [ ] **2.1: Async Job Queue with Redis/Celery** (⚪ Backlog)
-- [ ] **2.2: Multi-Market Data Loading System** (⚪ Backlog)
-- [ ] **2.3: 2-Year Lookback Constraint & Results Persistence** (⚪ Backlog)
+- [x] **2.1: Async Job Queue with Redis/Celery** (🟢 Done)
+- [x] **2.2: Crypto-First Data Loading System** (🟢 Done)
+- [x] **2.3: 2-Year Lookback Constraint & Results Persistence** (🟢 Done)
+- [x] **2.4: Monte Carlo Stress Test** (🟢 Done)
+- [x] **2.5: DeFi-Native Simulation Environment** (🟢 Done)
+- [x] **2.6: Perpetual Futures & Liquidation Engine** (🟢 Done)
 - [ ] **Epic 2 Retrospective** (⚪ Optional)
 
 ## Epic 3: AI-Driven Strategy Evolution (RL & Graph)
-**Status:** ⚪ Backlog
+**Status:** 🏗️ In Progress
 
-- [ ] **3.1: Offline RL Strategy Tuner** (⚪ Backlog)
+- [~] **3.1: Offline RL Strategy Tuner** (🟡 In Progress)
 - [ ] **3.2: Knowledge Graph Integration (News-to-Asset)** (⚪ Backlog)
 - [ ] **3.3: Explainable AI (XAI) for Strategy Changes** (⚪ Backlog)
+- [ ] **3.4: Walk-Forward Analysis (WFA)** (⚪ Backlog)
 - [ ] **Epic 3 Retrospective** (⚪ Optional)
 
 ## Epic 4: Advanced Reporting & Social Marketplace
@@ -43,10 +48,16 @@
 - [ ] **4.3: Strategy Marketplace: Publish & Discovery** (⚪ Backlog)
 - [ ] **Epic 4 Retrospective** (⚪ Optional)
 
-## Epic 5: Governance & Scaling Infrastructure
+## Epic 5: Premium User Experience & Enterprise Stability
 **Status:** ⚪ Backlog
 
 - [ ] **5.1: Tiered Priority Queue for Premium Users** (⚪ Backlog)
 - [ ] **5.2: Admin Monitoring Dashboard** (⚪ Backlog)
 - [ ] **5.3: Automated Cleanup & Scaling Policy** (⚪ Backlog)
 - [ ] **Epic 5 Retrospective** (⚪ Optional)
+
+## Epic 6: Generative Strategy Copilot (Phase 2)
+**Status:** ⚪ Backlog
+
+- [ ] **6.1: Generative Strategy Copilot** (⚪ Backlog)
+- [ ] **Epic 6 Retrospective** (⚪ Optional)

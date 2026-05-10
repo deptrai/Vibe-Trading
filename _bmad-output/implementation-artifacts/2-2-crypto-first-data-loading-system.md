@@ -1,6 +1,6 @@
 ---
 story_id: '2.2'
-story_key: '2-2-multi-market-data-loading-system'
+story_key: '2-2-crypto-first-data-loading-system'
 epic_num: 2
 story_num: 2
 title: 'Crypto-First Data Loading System'
