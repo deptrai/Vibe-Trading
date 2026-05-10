@@ -4,7 +4,10 @@
 V5: ReAct Agent + async /run + CORS env + SSE tool events.
 """
 
-from __future__ import annotations\n\nimport asyncio\nimport logging
+from __future__ import annotations
+
+import asyncio
+import logging
 import hmac
 import ipaddress
 import json
@@ -26,6 +29,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from rich.console import Console
 
 from src.ui_services import build_run_analysis, load_run_context
+from src.kg_store import get_kg_store
+from src.kg_crawler import sync_knowledge_graph
+from src.xai_service import XAIService, XAIResponse
 
 # UTF-8 on Windows
 import sys as _sys
@@ -44,7 +50,9 @@ ENV_EXAMPLE_PATH = AGENT_DIR / ".env.example"
 MAX_UPLOAD_SIZE = 50 * 1024 * 1024  # 50 MB
 _UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB
 
-# Rich console for colored logs\nconsole = Console()\nlogger = logging.getLogger(__name__)
+# Rich console for colored logs
+console = Console()
+logger = logging.getLogger(__name__)
 
 
 # ============================================================================
@@ -1216,7 +1224,7 @@ async def create_job(payload: VibeTradingJobPayload):
 
 @app.get("/jobs/{job_id}/progress", dependencies=[Depends(require_auth)])
 async def get_job_progress(job_id: str):
-    \"\"\"Poll for RL optimization progress.\"\"\"
+    """Poll for RL optimization progress."""
     if not job_id.isalnum():
         raise HTTPException(status_code=400, detail="Invalid job_id")
         
@@ -1244,6 +1252,42 @@ async def get_job_progress(job_id: str):
         pass
         
     return {"status": "pending_or_unknown"}
+
+
+@app.get("/api/v1/jobs/{job_id}/xai", response_model=XAIResponse, dependencies=[Depends(require_auth)])
+async def get_job_xai_explanation(job_id: str):
+    """Explain the reasoning behind suggested strategy modifications."""
+    if not job_id.isalnum():
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+
+    xai_service = XAIService(runs_dir=str(RUNS_DIR))
+    explanation = await xai_service.generate_with_llm(job_id)
+
+    if not explanation:
+        raise HTTPException(
+            status_code=404,
+            detail="Explanation unavailable - optimization data not found or job not completed"
+        )
+    return explanation
+
+
+@app.get("/api/v1/jobs/{job_id}/results", dependencies=[Depends(require_auth)])
+async def get_job_results(job_id: str):
+    """Retrieve optimization results, including WFA data."""
+    if not job_id.isalnum():
+        raise HTTPException(status_code=400, detail="Invalid job_id")
+
+    job_dir = RUNS_DIR / job_id
+    res_file = job_dir / "optimized_params.json"
+
+    if res_file.exists():
+        try:
+            return json.loads(res_file.read_text(encoding="utf-8"))
+        except Exception:
+            raise HTTPException(status_code=500, detail="Error reading result file")
+    
+    raise HTTPException(status_code=404, detail="Result file not found or job not finished")
+
 
 @app.post("/preview", response_model=PreviewResponse, dependencies=[Depends(require_auth)])
 async def preview_strategy(payload: VibeTradingJobPayload):
@@ -1659,6 +1703,45 @@ async def upload_file(file: UploadFile):
         "file_path": str(dest.resolve()),
         "filename": file.filename,
     }
+
+
+# ============================================================================
+# Knowledge Graph API
+# ============================================================================
+
+@app.get("/api/v1/kg/suggestions", dependencies=[Depends(require_auth)])
+async def get_kg_suggestions(limit: int = Query(10, ge=1, le=50), min_weight: float = Query(0.3, ge=0.0, le=1.0)):
+    """Get ranked asset suggestions based on real-time news impact."""
+    store = get_kg_store()
+    stats = store.stats()
+    return {
+        "suggestions": [s.model_dump() for s in store.get_suggestions(limit=limit, min_weight=min_weight)],
+        "last_sync": stats.get("last_sync"),
+        "total_events": stats.get("num_events", 0),
+        "total_assets": stats.get("num_assets", 0)
+    }
+
+
+@app.get("/api/v1/kg/events", dependencies=[Depends(require_auth)])
+async def get_kg_events(hours: int = Query(24, ge=1, le=168)):
+    """Get recent events processed by the knowledge graph."""
+    store = get_kg_store()
+    return [e.model_dump() for e in store.get_recent_events(hours=hours)]
+
+
+@app.get("/api/v1/kg/stats", dependencies=[Depends(require_auth)])
+async def get_kg_stats():
+    """Get basic statistics about the current knowledge graph."""
+    store = get_kg_store()
+    return store.stats()
+
+
+@app.post("/api/v1/kg/sync", dependencies=[Depends(require_auth)])
+async def sync_kg_manual():
+    """Manually trigger a background sync of the knowledge graph."""
+    from src.worker import celery_app
+    sync_knowledge_graph.delay()
+    return {"status": "triggered", "message": "Knowledge graph sync task queued."}
 
 
 # ============================================================================

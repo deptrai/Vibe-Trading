@@ -1,0 +1,462 @@
+{
+  "events": {
+    "evt_btc_etf": {
+      "event_id": "evt_btc_etf",
+      "title": "SEC Approves Spot Bitcoin ETFs",
+      "category": "regulation",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-04-10T21:16:14.279066Z",
+      "summary": "The SEC has approved the first spot Bitcoin ETFs in the US.",
+      "raw_categories": []
+    },
+    "evt_eth_dencun": {
+      "event_id": "evt_eth_dencun",
+      "title": "Ethereum Dencun Upgrade Goes Live",
+      "category": "upgrade",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-04-15T21:16:14.279066Z",
+      "summary": "The Dencun upgrade significantly reduces L2 fees via proto-danksharding.",
+      "raw_categories": []
+    },
+    "evt_sol_outage": {
+      "event_id": "evt_sol_outage",
+      "title": "Solana Network Experiences 5-Hour Outage",
+      "category": "hack",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-04-20T21:16:14.279066Z",
+      "summary": "Mainnet beta halted due to performance degradation.",
+      "raw_categories": []
+    },
+    "evt_btc_halving": {
+      "event_id": "evt_btc_halving",
+      "title": "Bitcoin Halving 2024 Completed",
+      "category": "halving",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-04-25T21:16:14.279066Z",
+      "summary": "Block reward reduced from 6.25 to 3.125 BTC.",
+      "raw_categories": []
+    },
+    "evt_binance_sec": {
+      "event_id": "evt_binance_sec",
+      "title": "SEC Lawsuit Against Binance Intensifies",
+      "category": "regulation",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-04-30T21:16:14.279066Z",
+      "summary": "New allegations point to commingling of customer funds.",
+      "raw_categories": []
+    },
+    "evt_usdc_depeg": {
+      "event_id": "evt_usdc_depeg",
+      "title": "USDC Briefly Depegs Following Bank Run",
+      "category": "depeg",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-05-05T21:16:14.279066Z",
+      "summary": "Circle reserves temporarily locked in distressed bank.",
+      "raw_categories": []
+    },
+    "evt_doge_twitter": {
+      "event_id": "evt_doge_twitter",
+      "title": "Twitter Replaces Logo with Doge Temporarily",
+      "category": "partnership",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-05-08T21:16:14.279066Z",
+      "summary": "Elon Musk temporarily changes Twitter UI to feature Dogecoin.",
+      "raw_categories": []
+    },
+    "evt_ada_smart_contracts": {
+      "event_id": "evt_ada_smart_contracts",
+      "title": "Cardano Deploys Plutus V3",
+      "category": "upgrade",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-05-09T21:16:14.279066Z",
+      "summary": "Major smart contract capability upgrade for Cardano.",
+      "raw_categories": []
+    },
+    "evt_xrp_lawsuit": {
+      "event_id": "evt_xrp_lawsuit",
+      "title": "Ripple Scores Partial Victory Against SEC",
+      "category": "regulation",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-05-10T09:16:14.279066Z",
+      "summary": "Judge rules programmatic sales of XRP are not securities.",
+      "raw_categories": []
+    },
+    "evt_link_ccip": {
+      "event_id": "evt_link_ccip",
+      "title": "Chainlink CCIP Goes Live on Mainnet",
+      "category": "upgrade",
+      "source": "Seed Data",
+      "url": null,
+      "timestamp": "2026-05-10T19:16:14.279066Z",
+      "summary": "Cross-Chain Interoperability Protocol launched for enterprise users.",
+      "raw_categories": []
+    }
+  },
+  "assets": {
+    "BTC": {
+      "asset_id": "BTC",
+      "symbol": "BTC",
+      "name": "Bitcoin",
+      "chain": null
+    },
+    "ETH": {
+      "asset_id": "ETH",
+      "symbol": "ETH",
+      "name": "Ethereum",
+      "chain": null
+    },
+    "USDT": {
+      "asset_id": "USDT",
+      "symbol": "USDT",
+      "name": "Tether",
+      "chain": null
+    },
+    "BNB": {
+      "asset_id": "BNB",
+      "symbol": "BNB",
+      "name": "BNB",
+      "chain": null
+    },
+    "SOL": {
+      "asset_id": "SOL",
+      "symbol": "SOL",
+      "name": "Solana",
+      "chain": null
+    },
+    "USDC": {
+      "asset_id": "USDC",
+      "symbol": "USDC",
+      "name": "USD Coin",
+      "chain": null
+    },
+    "XRP": {
+      "asset_id": "XRP",
+      "symbol": "XRP",
+      "name": "XRP",
+      "chain": null
+    },
+    "DOGE": {
+      "asset_id": "DOGE",
+      "symbol": "DOGE",
+      "name": "Dogecoin",
+      "chain": null
+    },
+    "TON": {
+      "asset_id": "TON",
+      "symbol": "TON",
+      "name": "Toncoin",
+      "chain": null
+    },
+    "ADA": {
+      "asset_id": "ADA",
+      "symbol": "ADA",
+      "name": "Cardano",
+      "chain": null
+    },
+    "SHIB": {
+      "asset_id": "SHIB",
+      "symbol": "SHIB",
+      "name": "Shiba Inu",
+      "chain": null
+    },
+    "AVAX": {
+      "asset_id": "AVAX",
+      "symbol": "AVAX",
+      "name": "Avalanche",
+      "chain": null
+    },
+    "DOT": {
+      "asset_id": "DOT",
+      "symbol": "DOT",
+      "name": "Polkadot",
+      "chain": null
+    },
+    "BCH": {
+      "asset_id": "BCH",
+      "symbol": "BCH",
+      "name": "Bitcoin Cash",
+      "chain": null
+    },
+    "TRX": {
+      "asset_id": "TRX",
+      "symbol": "TRX",
+      "name": "TRON",
+      "chain": null
+    },
+    "LINK": {
+      "asset_id": "LINK",
+      "symbol": "LINK",
+      "name": "Chainlink",
+      "chain": null
+    },
+    "MATIC": {
+      "asset_id": "MATIC",
+      "symbol": "MATIC",
+      "name": "Polygon",
+      "chain": null
+    },
+    "NEAR": {
+      "asset_id": "NEAR",
+      "symbol": "NEAR",
+      "name": "NEAR Protocol",
+      "chain": null
+    },
+    "LTC": {
+      "asset_id": "LTC",
+      "symbol": "LTC",
+      "name": "Litecoin",
+      "chain": null
+    },
+    "ICP": {
+      "asset_id": "ICP",
+      "symbol": "ICP",
+      "name": "Internet Computer",
+      "chain": null
+    }
+  },
+  "impacts": {
+    "evt_btc_etf": [
+      {
+        "event_id": "evt_btc_etf",
+        "asset_id": "BTC",
+        "weight": 0.9,
+        "direction": "bullish",
+        "reason": "Direct institutional inflow"
+      },
+      {
+        "event_id": "evt_btc_etf",
+        "asset_id": "ETH",
+        "weight": 0.6,
+        "direction": "bullish",
+        "reason": "Anticipation of ETH ETF"
+      }
+    ],
+    "evt_eth_dencun": [
+      {
+        "event_id": "evt_eth_dencun",
+        "asset_id": "ETH",
+        "weight": 0.8,
+        "direction": "bullish",
+        "reason": "Network deflation and improved L2 economics"
+      },
+      {
+        "event_id": "evt_eth_dencun",
+        "asset_id": "MATIC",
+        "weight": 0.7,
+        "direction": "bullish",
+        "reason": "Direct beneficiary of reduced L2 fees"
+      }
+    ],
+    "evt_sol_outage": [
+      {
+        "event_id": "evt_sol_outage",
+        "asset_id": "SOL",
+        "weight": 0.8,
+        "direction": "bearish",
+        "reason": "Network instability concerns"
+      },
+      {
+        "event_id": "evt_sol_outage",
+        "asset_id": "ETH",
+        "weight": 0.4,
+        "direction": "bullish",
+        "reason": "Capital rotation to competing L1"
+      }
+    ],
+    "evt_btc_halving": [
+      {
+        "event_id": "evt_btc_halving",
+        "asset_id": "BTC",
+        "weight": 0.9,
+        "direction": "bullish",
+        "reason": "Supply shock and historical post-halving performance"
+      }
+    ],
+    "evt_binance_sec": [
+      {
+        "event_id": "evt_binance_sec",
+        "asset_id": "BNB",
+        "weight": 0.8,
+        "direction": "bearish",
+        "reason": "Regulatory risk for exchange token"
+      },
+      {
+        "event_id": "evt_binance_sec",
+        "asset_id": "BTC",
+        "weight": 0.3,
+        "direction": "bearish",
+        "reason": "General market FUD"
+      }
+    ],
+    "evt_usdc_depeg": [
+      {
+        "event_id": "evt_usdc_depeg",
+        "asset_id": "USDC",
+        "weight": 0.9,
+        "direction": "bearish",
+        "reason": "Loss of peg confidence"
+      },
+      {
+        "event_id": "evt_usdc_depeg",
+        "asset_id": "USDT",
+        "weight": 0.8,
+        "direction": "bullish",
+        "reason": "Flight to alternative stablecoin"
+      }
+    ],
+    "evt_doge_twitter": [
+      {
+        "event_id": "evt_doge_twitter",
+        "asset_id": "DOGE",
+        "weight": 0.9,
+        "direction": "bullish",
+        "reason": "Massive retail exposure and speculation"
+      },
+      {
+        "event_id": "evt_doge_twitter",
+        "asset_id": "SHIB",
+        "weight": 0.5,
+        "direction": "bullish",
+        "reason": "Sympathetic memecoin pump"
+      }
+    ],
+    "evt_ada_smart_contracts": [
+      {
+        "event_id": "evt_ada_smart_contracts",
+        "asset_id": "ADA",
+        "weight": 0.7,
+        "direction": "bullish",
+        "reason": "Improved ecosystem capabilities"
+      }
+    ],
+    "evt_xrp_lawsuit": [
+      {
+        "event_id": "evt_xrp_lawsuit",
+        "asset_id": "XRP",
+        "weight": 0.9,
+        "direction": "bullish",
+        "reason": "Regulatory clarity"
+      },
+      {
+        "event_id": "evt_xrp_lawsuit",
+        "asset_id": "ADA",
+        "weight": 0.4,
+        "direction": "bullish",
+        "reason": "Positive precedent for other altcoins"
+      }
+    ],
+    "evt_link_ccip": [
+      {
+        "event_id": "evt_link_ccip",
+        "asset_id": "LINK",
+        "weight": 0.8,
+        "direction": "bullish",
+        "reason": "Major fundamental utility milestone"
+      }
+    ]
+  },
+  "correlations": {
+    "BTC": [
+      {
+        "asset_id": "ETH",
+        "weight": 0.85,
+        "category": "market_leaders"
+      }
+    ],
+    "ETH": [
+      {
+        "asset_id": "BTC",
+        "weight": 0.85,
+        "category": "market_leaders"
+      },
+      {
+        "asset_id": "SOL",
+        "weight": 0.75,
+        "category": "l1_competition"
+      },
+      {
+        "asset_id": "MATIC",
+        "weight": 0.85,
+        "category": "l2_ecosystem"
+      }
+    ],
+    "SOL": [
+      {
+        "asset_id": "ETH",
+        "weight": 0.75,
+        "category": "l1_competition"
+      },
+      {
+        "asset_id": "AVAX",
+        "weight": 0.8,
+        "category": "l1_basket"
+      }
+    ],
+    "AVAX": [
+      {
+        "asset_id": "SOL",
+        "weight": 0.8,
+        "category": "l1_basket"
+      }
+    ],
+    "ADA": [
+      {
+        "asset_id": "DOT",
+        "weight": 0.7,
+        "category": "l1_basket"
+      }
+    ],
+    "DOT": [
+      {
+        "asset_id": "ADA",
+        "weight": 0.7,
+        "category": "l1_basket"
+      }
+    ],
+    "USDT": [
+      {
+        "asset_id": "USDC",
+        "weight": 0.99,
+        "category": "stablecoins"
+      }
+    ],
+    "USDC": [
+      {
+        "asset_id": "USDT",
+        "weight": 0.99,
+        "category": "stablecoins"
+      }
+    ],
+    "DOGE": [
+      {
+        "asset_id": "SHIB",
+        "weight": 0.9,
+        "category": "memecoins"
+      }
+    ],
+    "SHIB": [
+      {
+        "asset_id": "DOGE",
+        "weight": 0.9,
+        "category": "memecoins"
+      }
+    ],
+    "MATIC": [
+      {
+        "asset_id": "ETH",
+        "weight": 0.85,
+        "category": "l2_ecosystem"
+      }
+    ]
+  },
+  "last_sync": null
+}

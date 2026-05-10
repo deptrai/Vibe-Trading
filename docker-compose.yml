@@ -11,6 +11,7 @@ services:
     volumes:
       - vibe-runs:/app/agent/runs
       - vibe-sessions:/app/agent/sessions
+      - kg-data:/app/agent/kg_data
     restart: unless-stopped
     depends_on:
       - redis
@@ -40,6 +41,24 @@ services:
     depends_on:
       - redis
 
+  kg-worker:
+    build: .
+    command: celery -A src.worker worker -B -Q kg_sync -c 1 --max-memory-per-child=512000
+    env_file:
+      - agent/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - kg-data:/app/agent/kg_data
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    restart: unless-stopped
+    depends_on:
+      - redis
+
   frontend:
     image: node:20
     working_dir: /app
@@ -59,3 +78,4 @@ services:
 volumes:
   vibe-runs:
   vibe-sessions:
+  kg-data:

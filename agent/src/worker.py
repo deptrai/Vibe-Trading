@@ -35,10 +35,18 @@ celery_app.conf.update(
     timezone="UTC",
     enable_utc=True,
     result_expires=3600,  # Results expire in 1 hour to prevent Redis OOM
+    imports=["src.kg_crawler"],
     task_routes={
         "src.worker.run_backtest_job": {"queue": "backtest"},
         "src.rl_worker.run_rl_optimization_job": {"queue": "rl_optimization"},
+        "src.kg_crawler.sync_knowledge_graph": {"queue": "kg_sync"},
         "src.worker.*": {"queue": "default"},
+    },
+    beat_schedule={
+        "sync-kg-periodically": {
+            "task": "src.kg_crawler.sync_knowledge_graph",
+            "schedule": float(os.getenv("KG_SYNC_INTERVAL_MINUTES", "5")) * 60,
+        },
     },
 )
 

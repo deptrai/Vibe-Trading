@@ -32,12 +32,12 @@
 - [ ] **Epic 2 Retrospective** (⚪ Optional)
 
 ## Epic 3: AI-Driven Strategy Evolution (RL & Graph)
-**Status:** 🏗️ In Progress
+**Status:** ✅ Done
 
-- [~] **3.1: Offline RL Strategy Tuner** (🟡 In Progress)
-- [ ] **3.2: Knowledge Graph Integration (News-to-Asset)** (⚪ Backlog)
-- [ ] **3.3: Explainable AI (XAI) for Strategy Changes** (⚪ Backlog)
-- [ ] **3.4: Walk-Forward Analysis (WFA)** (⚪ Backlog)
+- [x] **3.1: Offline RL Strategy Tuner** (🟢 Done)
+- [x] **3.2: Knowledge Graph Integration (News-to-Asset)** (🟢 Done)
+- [x] **3.3: Explainable AI (XAI) for Strategy Changes** (🟢 Done)
+- [x] **3.4: Walk-Forward Analysis (WFA)** (🟢 Done)
 - [ ] **Epic 3 Retrospective** (⚪ Optional)
 
 ## Epic 4: Advanced Reporting & Social Marketplace

@@ -9,3 +9,8 @@
 ## Deferred from: code review of 2-3-2-year-lookback-constraint-results-persistence.md (2026-05-10)
 - Static Gas Fee Assumption [agent/src/worker.py:180] — Current logic uses a static gas fee instead of dynamic/market-based estimation.
 - Missing Storage Limit/Safety check — The system does not verify disk space before saving large CSV files.
+
+## Deferred from: code review of 3-2-knowledge-graph-integration-news-to-asset.md (2026-05-11)
+- Singleton `get_kg_store()` not thread-safe at module level — low-probability startup race [agent/src/kg_store.py:264-279]
+- `import hashlib` unused in kg_crawler.py — leftover from planned URL-hash dedup [agent/src/kg_crawler.py:3]
+

@@ -101,11 +101,15 @@ def run_rl_optimization_job(self, payload: dict) -> dict:
         
         max_trials = getattr(job_payload.execution_flags, "rl_max_trials", 50)
         target = getattr(job_payload.execution_flags, "rl_optimization_target", "sharpe")
+        wfa_config = job_payload.execution_flags.wfa_config
         
         optimizer = RLOptimizer(job_dir=job_dir, target=target, max_trials=max_trials)
         callback = RLProgressCallback(self, max_trials)
         
-        result = optimizer.optimize(market_data=market_data, callbacks=[callback])
+        if wfa_config:
+            result = optimizer.walk_forward_optimize(market_data=market_data, wfa_config=wfa_config, callbacks=[callback])
+        else:
+            result = optimizer.optimize(market_data=market_data, callbacks=[callback])
         
         return result
         

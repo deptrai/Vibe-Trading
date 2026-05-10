@@ -1,62 +1,80 @@
 ---
-stepsCompleted: ['step-01-preflight-and-context', 'step-02-identify-targets']
-lastStep: 'step-02-identify-targets'
-lastSaved: '2026-05-10'
+stepsCompleted:
+  - step-01-preflight-and-context
+  - step-02-identify-targets
+  - step-03c-aggregate
+  - step-04-validate-and-summarize
+lastStep: step-04-validate-and-summarize
+lastSaved: '2026-05-11T04:15:00+07:00'
 inputDocuments:
+  - _bmad-output/implementation-artifacts/3-2-knowledge-graph-integration-news-to-asset.md
   - _bmad-output/project-context.md
-  - _bmad-output/planning-artifacts/prd.md
-  - _bmad-output/planning-artifacts/architecture.md
-  - _bmad-output/planning-artifacts/epics.md
-  - .agents/skills/bmad-testarch-automate/resources/tea-index.csv
+  - agent/tests/unit/test_kg_api.py
+  - agent/tests/unit/test_kg_crawler.py
+  - agent/tests/unit/test_kg_store.py
+  - agent/tests/unit/test_kg_seed.py
 ---
 
-# Automation Summary - Epic 2.5: DeFi-Native Simulation Environment
+## Step 1: Preflight & Context Loading Summary
 
-## Step 1: Preflight & Context Loading - COMPLETED
+- **Execution Mode:** Create (BMad-Integrated Mode)
+- **Detected Stack:** `fullstack` (Backend in `agent/` with Pytest, Frontend in `frontend/` with Vite/React and Playwright)
+- **Framework Status:** Verified (Pytest detected in `agent/tests/`, Playwright detected in `frontend/package.json`)
+- **Loaded Context:**
+  - Story: `3-2-knowledge-graph-integration-news-to-asset.md`
+  - Tech Specs & Rules: `project-context.md`
+  - Existing Tests: `test_kg_store.py`, `test_kg_crawler.py`, `test_kg_api.py`, `test_kg_seed.py`
+- **Knowledge Base Fragments Loaded:** Core testing patterns, CI/CD burn-in guidelines, Pytest testing structure.
 
-### Stack Detection
-- **Detected Stack**: `fullstack`
-- **Backend**: Python (FastAPI, pytest)
-- **Frontend**: React 19 (TypeScript, Playwright)
+## Step 2: Target Identification & Coverage Plan
 
-### Framework Verification
-- **Pytest**: Found in `agent/tests` and `tests/unit`.
-- **Playwright**: Found in `frontend/tests/e2e` and `tests/api`.
-- **Status**: Framework is ready.
+### Coverage Scope & Justification
+**Scope:** Selective (Backend-only integration and error resilience).
+**Justification:** Frontend components for this story are deferred. Existing unit tests cover basic graph logic (`kg_store`) and pure extraction functions. The major gaps lie in integration points (API responses with populated data) and error resilience (network timeouts during crawler ingestion, API fallback). E2E is skipped since no UI is built yet. Priority is given to integration testing.
 
-### Execution Mode
-- **Mode**: BMad-Integrated (PRD, Architecture, and Epics loaded).
+### Targets by Test Level & Priority
 
-## Step 2: Identify Automation Targets - COMPLETED
+#### Integration Tests
+| Priority | Target | Description |
+|---|---|---|
+| P1 | `GET /api/v1/kg/suggestions` | Verify populated graph responses, sorting, limits, min_weight filters, auth requirements. |
+| P1 | `GET /api/v1/kg/events` & `stats`| Verify populated data retrieval and date window filtering. |
+| P1 | `POST /api/v1/kg/sync` | Trigger manual sync and verify it calls the Celery task (mocked). |
+| P2 | Graceful Degradation | Verify API endpoints do not crash when the graph store fails or raises unexpected errors. |
 
-### 1. Targets Determination
-- **Logic Level**: `DeFiSimulator` class in `agent/src/defi_simulator.py`.
-    - `calculate_gas_fee`
-    - `calculate_slippage`
-    - `calculate_impermanent_loss`
-    - `apply_defi_impact`
-- **API Level**:
-    - `POST /preview`: Verify DeFi-related summary.
-    - `POST /jobs`: Verify handling of `SimulationEnvironment` fields.
-- **E2E Level**:
-    - User journey for DeFi Backtest (Chat prompt -> Preview -> Execute -> Result metrics).
+#### Unit Tests
+| Priority | Target | Description |
+|---|---|---|
+| P1 | `kg_crawler.fetch_crypto_news` | Mock HTTP requests to verify primary API parsing and fallback API sequence. |
+| P1 | `kg_crawler.sync_knowledge_graph`| Validate error handling during crawler execution (timeouts, 500s) to ensure worker doesn't crash. |
 
-### 2. Test Levels & Priorities
+## Step 3 & 4: Automation Summary & Execution Report
 
-| Target | Test Level | Priority | Justification |
-| :--- | :--- | :--- | :--- |
-| **Financial Formulas** | Unit | P0 | Độ chính xác của Gas/Slippage/IL là cốt lõi của mô phỏng DeFi. |
-| **Payload Validation** | Unit/Model | P1 | Đảm bảo ràng buộc dữ liệu (ví dụ: leverage trong DeFi) được thực thi. |
-| **API Endpoints** | API | P1 | Đảm bảo Nowing và Vibe giao tiếp đúng qua payload DeFi. |
-| **E2E Journey** | E2E | P1 | Đảm bảo tính năng hoạt động thực tế cho người dùng cuối. |
+### Test Generation
+- **Subagent Execution Mode:** SEQUENTIAL (API then dependent workers)
+- **Detected Stack:** `fullstack` (executed API & Backend test generation; E2E deferred)
 
-### 3. Coverage Plan
+### Statistics
+- **Total Tests Generated:** 10
+  - **API Tests:** 6 (1 file)
+  - **Backend Tests:** 4 (1 file)
+- **Test Levels Covered:** Unit, Integration
+- **Fixtures Required:** `auth_headers`, `populated_store`, `mock_requests`
+- **Priority Coverage:**
+  - P0: 0
+  - P1: 9
+  - P2: 1
+  - P3: 0
 
-| Scenario | Level | Priority | Expected Outcome |
-| :--- | :--- | :--- | :--- |
-| Gas fee models (`low`, `standard`, `high`) | Unit | P0 | Tính toán đúng base cost + multiplier. |
-| Dynamic Slippage edge cases | Unit | P0 | Handle pool liquidity thấp/cực cao và trade size lớn. |
-| Impermanent Loss calculation | Unit | P0 | Chính xác theo mô hình Constant Product AMM (price doubling/halving). |
-| `POST /preview` DeFi Summary | API | P1 | Summary phản ánh đúng các thông số DeFi đã nhập. |
-| `POST /jobs` integration | API | P1 | Payload được nhận và enqueue thành công với đầy đủ context DeFi. |
-| Full DeFi LP Backtest Flow | E2E | P1 | User có thể chạy mô phỏng LP và xem báo cáo có chỉ số IL/Gas. |
+### Files Created
+- `agent/tests/integration/test_kg_api_integration.py`
+- `agent/tests/unit/test_kg_crawler_network.py`
+
+### Key Assumptions and Risks
+- **Assumptions:** The integration test fixture `populated_store` accurately simulates an initialized in-memory database by directly mutating `_kg_store_instance`.
+- **Risks:** The network mocks in `test_kg_crawler_network.py` simulate expected CryptoCompare/CoinGecko JSON structures based on existing parser logic; if the live API significantly alters its schema, these mocks will pass but production will fail. This should be addressed via contract tests or live burn-in environments later.
+
+### Next Steps
+Test automation for Story 3.2 is complete! The codebase now features robust backend integration tests and crawler error handling.
+Recommended next step:
+- Run Code Review (`bmad-code-review`) on the generated tests and implementation.
