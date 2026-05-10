@@ -54,3 +54,7 @@ class VibeTradingJobPayload(BaseModel):
             if self.risk_management.leverage > Decimal('1.0'):
                 raise ValueError("Leverage greater than 1.0 is not supported for SPOT instruments.")
         return self
+
+class PreviewResponse(BaseModel):
+    summary: str
+    confidence_score: float = Field(..., ge=0.0, le=1.0)

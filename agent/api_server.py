@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Query, Request, Security, UploadFile, status
-from src.api_models import VibeTradingJobPayload
+from src.api_models import VibeTradingJobPayload, PreviewResponse
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, Field
@@ -1186,6 +1186,27 @@ async def health_check():
 async def create_job(payload: VibeTradingJobPayload):
     """Validate incoming payload and enqueue a job."""
     return {"status": "accepted", "job_id": str(uuid.uuid4())}
+
+@app.post("/preview", response_model=PreviewResponse, dependencies=[Depends(require_auth)])
+async def preview_strategy(payload: VibeTradingJobPayload):
+    """Generate a summary and confidence score for a strategy payload."""
+    assets = ", ".join(payload.context_rules.assets) if payload.context_rules.assets else "Any Asset"
+    timeframe = payload.context_rules.timeframe
+    
+    indicators = ", ".join(payload.context_rules.indicators) if payload.context_rules.indicators else "Price Action"
+    strategy_desc = "Strategy"
+    if payload.context_rules.natural_language_rules:
+        nl_rules = payload.context_rules.natural_language_rules
+        strategy_desc = nl_rules[:50] + ("..." if len(nl_rules) > 50 else "")
+    
+    position_pct = float(payload.risk_management.position_sizing) * 100
+    summary = f"{strategy_desc} using {indicators} on {assets} ({timeframe}) with {position_pct:g}% position sizing"
+    
+    # Placeholder for confidence calculation logic
+    return PreviewResponse(
+        summary=summary,
+        confidence_score=0.95
+    )
 
 
 @app.get("/correlation")
