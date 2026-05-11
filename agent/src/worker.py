@@ -1,3 +1,4 @@
+import sys
 import os
 import logging
 import json
@@ -170,6 +171,75 @@ def run_backtest_job(self, payload: dict) -> dict:
         runs_dir = os.environ.get("RUNS_DIR", DEFAULT_RUNS_DIR)
         job_dir = os.path.join(runs_dir, str(self.request.id))
         os.makedirs(job_dir, exist_ok=True)
+        
+        code_dir = os.path.join(job_dir, "code")
+        os.makedirs(code_dir, exist_ok=True)
+        
+        # 3. Handle Strategy Code Generation (Story 6.1)
+        strategy_path = os.path.join(code_dir, "signal_engine.py")
+        if job_payload.context_rules.executable_code:
+            logger.info("Using provided executable code.")
+            with open(strategy_path, "w") as f:
+                f.write(job_payload.context_rules.executable_code)
+        elif job_payload.context_rules.natural_language_rules:
+            logger.info("Invoking AgentLoop headless mode to generate strategy...")
+            from src.tools import build_registry
+            from src.providers.chat import ChatLLM
+            from src.agent.loop import AgentLoop
+            from src.memory.persistent import PersistentMemory
+            
+            llm = ChatLLM()
+            pm = PersistentMemory()
+            agent = AgentLoop(
+                registry=build_registry(persistent_memory=pm, include_shell_tools=False),
+                llm=llm,
+                max_iterations=10,
+                persistent_memory=pm,
+            )
+            headless_result = agent.run_headless(job_payload.context_rules.natural_language_rules, Path(job_dir))
+            if headless_result.get("status") == "failed":
+                return {
+                    "status": "error",
+                    "job_id": self.request.id,
+                    "message": "AgentLoop failed to generate signal_engine.py: " + headless_result.get("reason", "Unknown error")
+                }
+        else:
+            return {
+                "status": "error",
+                "job_id": self.request.id,
+                "message": "Payload must contain either executable_code or natural_language_rules."
+            }
+            
+        # 4. Generate config.json for the engine
+        config_data = {
+            "codes": valid_crypto_assets,
+            "start_date": effective_start_date.strftime("%Y-%m-%d"),
+            "end_date": now.strftime("%Y-%m-%d"),
+            "source": exchange or "auto",
+            "interval": timeframe,
+            "engine": "daily"
+        }
+        with open(os.path.join(job_dir, "config.json"), "w") as f:
+            json.dump(config_data, f, indent=2)
+            
+        # 5. Execute backtest.runner
+        import subprocess
+        logger.info(f"Executing backtest.runner for job {self.request.id}")
+        runner_result = subprocess.run(
+            [sys.executable, "-m", "backtest.runner", str(job_dir)],
+            capture_output=True,
+            text=True,
+            cwd=os.environ.get("PYTHONPATH", os.getcwd())
+        )
+        if runner_result.returncode != 0:
+            logger.error(f"Runner failed: {runner_result.stderr}")
+            return {
+                "status": "error",
+                "job_id": self.request.id,
+                "message": "Engine runner failed execution.",
+                "stderr": runner_result.stderr
+            }
+
             
         data_summary = {}
         if market_data:
@@ -212,9 +282,17 @@ def run_backtest_job(self, payload: dict) -> dict:
                                 close_col = columns_lower["close"]
                                 asset_returns = df[close_col].pct_change().replace([np.inf, -np.inf], np.nan).dropna()
                                 if len(asset_returns) > 0:
-                                    # Simulate strategy returns
-                                    random_positions = np.random.choice([0, 1, -1], size=len(asset_returns), p=[0.5, 0.3, 0.2])
-                                    simulated_trade_returns = asset_returns * random_positions
+                                    # Load actual strategy returns from equity.csv if available
+                                    equity_path = os.path.join(job_dir, "artifacts", "equity.csv")
+                                    if os.path.exists(equity_path):
+                                        eq_df = pd.read_csv(equity_path, index_col=0, parse_dates=True)
+                                        simulated_trade_returns = eq_df["equity"].pct_change().fillna(0)
+                                    else:
+                                        simulated_trade_returns = pd.Series(0, index=asset_returns.index)
+                                    
+                                    # For positions, we might not have them easily accessible per bar for liquidations
+                                    # We'll mock positions based on returns for the sake of the simulator
+                                    random_positions = np.where(simulated_trade_returns > 0, 1, np.where(simulated_trade_returns < 0, -1, 0))
 
                                     liquidation_events = []
                                     total_funding_fees = 0.0
@@ -316,6 +394,13 @@ def run_backtest_job(self, payload: dict) -> dict:
                         except Exception as loop_e:
                             logger.error(f"Error during Monte Carlo simulation for {symbol}: {loop_e}", exc_info=True)
 
+        engine_artifacts = {}
+        artifacts_dir = os.path.join(job_dir, "artifacts")
+        if os.path.exists(artifacts_dir):
+            for file in os.listdir(artifacts_dir):
+                if file.endswith((".csv", ".png", ".json")):
+                    engine_artifacts[file] = os.path.join(artifacts_dir, file)
+
         # Save a metadata summary file
         meta_path = os.path.join(job_dir, "metadata.json")
         with open(meta_path, "w") as f:
@@ -326,6 +411,7 @@ def run_backtest_job(self, payload: dict) -> dict:
                 "exchange": exchange,
                 "rejected_assets": rejected_assets,
                 "data_summary": data_summary,
+                "engine_artifacts": engine_artifacts,
             }, f, indent=2)
 
         return {

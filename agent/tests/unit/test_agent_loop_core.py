@@ -137,3 +137,37 @@ class TestAgentLoopCore:
             result = loop.run("task")
             
         assert result["status"] == "cancelled"
+
+    def test_run_headless_success(self, mock_deps: tuple[MagicMock, MagicMock], tmp_path) -> None:
+        registry, llm = mock_deps
+        loop = AgentLoop(registry, llm)
+        
+        # Mock run to return success without actually invoking the LLM
+        def mock_run(user_message, session_id):
+            code_dir = tmp_path / "code"
+            code_dir.mkdir(parents=True, exist_ok=True)
+            (code_dir / "signal_engine.py").write_text("print('hello')")
+            return {"status": "success", "run_dir": str(tmp_path), "react_trace": [{"type": "answer", "content": "done"}]}
+            
+        with patch.object(loop, 'run', side_effect=mock_run) as mock_run_method:
+            result = loop.run_headless("Buy high sell low", tmp_path)
+            
+        mock_run_method.assert_called_once()
+        assert result["status"] == "success"
+        assert result["run_dir"] == str(tmp_path)
+        assert len(result["react_trace"]) == 1
+
+    def test_run_headless_failure(self, mock_deps: tuple[MagicMock, MagicMock], tmp_path) -> None:
+        registry, llm = mock_deps
+        loop = AgentLoop(registry, llm)
+        
+        # Mock run, but strategy.py is not created
+        def mock_run(user_message, session_id):
+            return {"status": "success", "run_dir": str(tmp_path), "react_trace": []}
+            
+        with patch.object(loop, 'run', side_effect=mock_run) as mock_run_method:
+            result = loop.run_headless("Do nothing", tmp_path)
+            
+        mock_run_method.assert_called_once()
+        assert result["status"] == "failed"
+        assert "not generated" in result["reason"]
