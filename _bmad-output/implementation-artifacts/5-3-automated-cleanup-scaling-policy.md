@@ -4,12 +4,12 @@ story_key: '5-3-automated-cleanup-scaling-policy'
 epic_num: 5
 story_num: 3
 title: 'Automated Cleanup & Scaling Policy'
-status: 'review'
+status: 'done'
 ---
 
 # Story 5.3: Automated Cleanup & Scaling Policy
 
-Status: review
+Status: done
 
 ## Story
 
@@ -80,6 +80,14 @@ A Celery beat task is preferred over system cron to keep all logic inside Python
 - `agent/tests/unit/test_cleanup.py` (CREATE)
 - `agent/src/autoscaler.py` (CREATE)
 - `agent/tests/unit/test_autoscaler.py` (CREATE)
+
+### Review Findings
+
+- [x] [Review][Patch] Cấu hình Autoscaler gộp tổng tất cả queue thay vì kiểm tra từng queue [autoscaler.py:61] — Spec yêu cầu "nếu queue > 10" cho từng queue, nhưng implementation hiện tại tính tổng chiều dài của tất cả các queue để scale up.
+- [x] [Review][Patch] Lỗi Redis làm worker scale down sai [autoscaler.py:41] — Nếu Redis mất kết nối, `get_total_queue_length` trả về 0, kích hoạt logic scale down không mong muốn.
+- [x] [Review][Patch] Autoscaler bị block tối đa 30s khi scale down [autoscaler.py:34] — Lệnh `process.wait(timeout=30)` làm loop chính bị đứng, chặn việc theo dõi queue.
+- [x] [Review][Patch] Process Celery bị treo (zombie) khi KeyboardInterrupt [autoscaler.py:75] — Các process con được gọi `terminate()` nhưng thiếu `wait()`, dễ trở thành tiến trình mồ côi.
+- [x] [Review][Defer] Hardcode danh sách queue trong Autoscaler [autoscaler.py:17] — Danh sách queue bị lặp lại với cấu hình ở worker.py — deferred, pre-existing
 
 ## Change Log
 - **2026-05-11**: Implemented automated cleanup logic in `agent/src/cleanup.py` to delete old and space-consuming artifacts.

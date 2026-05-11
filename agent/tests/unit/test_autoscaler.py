@@ -80,8 +80,8 @@ def test_autoscaler_queue_length(mock_redis):
     
     autoscaler = WorkerAutoscaler()
     
-    # 2 premium queues * 5 = 10, 2 standard queues * 10 = 20 -> 30 total
-    assert autoscaler.get_total_queue_length() == 30
+    # 2 premium queues * 5 = 10, 2 standard queues * 10 = 20 -> max is 10
+    assert autoscaler.get_max_queue_length() == 10
     
     mock_client.llen.assert_has_calls([
         mock.call("backtest.standard"),

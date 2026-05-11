@@ -1,0 +1,965 @@
+INFO:__main__:Starting WorkerAutoscaler. Min: 1, Max: 3, Threshold: 10
+INFO:__main__:Scaled up: Started new worker autoscale_1 with PID 87008
+INFO:__main__:Current total queue length: 15, Active workers: 1
+INFO:__main__:Queue length 15 exceeds threshold 10. Scaling up.
+INFO:__main__:Scaled up: Started new worker autoscale_2 with PID 87009
+ 
+ -------------- autoscale_2@MacBook-Pro-cua-Luis.local v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- macOS-26.0-arm64-arm-64bit-Mach-O 2026-05-11 12:37:41
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         vibe_trading_worker:0x10e066ba0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 10 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> backtest.premium exchange=backtest.premium(direct) key=backtest.premium
+                .> backtest.standard exchange=backtest.standard(direct) key=backtest.standard
+                .> rl_optimization.premium exchange=rl_optimization.premium(direct) key=rl_optimization.premium
+                .> rl_optimization.standard exchange=rl_optimization.standard(direct) key=rl_optimization.standard
+
+[tasks]
+  . src.kg_crawler.sync_knowledge_graph
+  . src.worker.run_backtest_job
+  . src.worker.run_cleanup
+
+ 
+ -------------- autoscale_1@MacBook-Pro-cua-Luis.local v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- macOS-26.0-arm64-arm-64bit-Mach-O 2026-05-11 12:37:41
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         vibe_trading_worker:0x110602ba0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 10 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> backtest.premium exchange=backtest.premium(direct) key=backtest.premium
+                .> backtest.standard exchange=backtest.standard(direct) key=backtest.standard
+                .> rl_optimization.premium exchange=rl_optimization.premium(direct) key=rl_optimization.premium
+                .> rl_optimization.standard exchange=rl_optimization.standard(direct) key=rl_optimization.standard
+
+[tasks]
+  . src.kg_crawler.sync_knowledge_graph
+  . src.worker.run_backtest_job
+  . src.worker.run_cleanup
+
+[2026-05-11 12:37:43,007: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-05-11 12:37:43,008: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-05-11 12:37:43,016: INFO/MainProcess] mingle: searching for neighbors
+[2026-05-11 12:37:43,016: INFO/MainProcess] mingle: searching for neighbors
+[2026-05-11 12:37:44,027: INFO/MainProcess] mingle: all alone
+[2026-05-11 12:37:44,027: INFO/MainProcess] mingle: all alone
+[2026-05-11 12:37:44,048: INFO/MainProcess] autoscale_2@MacBook-Pro-cua-Luis.local ready.
+[2026-05-11 12:37:44,050: INFO/MainProcess] autoscale_1@MacBook-Pro-cua-Luis.local ready.
+[2026-05-11 12:37:44,050: INFO/MainProcess] Task src.worker.run_backtest_job[eef879b6-64f5-4404-b37a-a39fa612649f] received
+[2026-05-11 12:37:44,052: INFO/MainProcess] Task src.worker.run_backtest_job[6c912e29-9acf-480c-8ab4-ddac87d5314d] received
+[2026-05-11 12:37:44,052: INFO/MainProcess] Task src.worker.run_backtest_job[214d6f8a-afba-488c-abfa-e7b9ac1262f9] received
+[2026-05-11 12:37:44,053: INFO/MainProcess] Task src.worker.run_backtest_job[2cc2143c-008d-481f-a8b1-b0c826c86545] received
+[2026-05-11 12:37:44,053: INFO/MainProcess] Task src.worker.run_backtest_job[3c96b32f-ca31-4345-9c99-d9c6ffe8f69f] received
+[2026-05-11 12:37:44,054: INFO/MainProcess] Task src.worker.run_backtest_job[03b81a5f-4d14-43fc-9496-c2584b01d6cb] received
+[2026-05-11 12:37:44,054: INFO/MainProcess] Task src.worker.run_backtest_job[96a1353b-6a41-4bdb-b116-9100763e9973] received
+[2026-05-11 12:37:44,055: INFO/MainProcess] Task src.worker.run_backtest_job[9c9e08cb-df73-4096-bc54-83aff8aba5ae] received
+[2026-05-11 12:37:44,056: INFO/MainProcess] Task src.worker.run_backtest_job[8722cde7-1c3b-46f5-8256-709e74e56b3e] received
+[2026-05-11 12:37:44,058: INFO/MainProcess] Task src.worker.run_backtest_job[4495b8cf-6567-446b-b501-6a3855ad0634] received
+[2026-05-11 12:37:44,061: INFO/MainProcess] Task src.worker.run_backtest_job[38d9bf6d-e66d-47d9-b654-6fb3d20d6591] received
+[2026-05-11 12:37:44,061: INFO/MainProcess] Task src.worker.run_backtest_job[fb86aa71-9182-4d66-acc2-ed33df078df8] received
+[2026-05-11 12:37:44,062: INFO/MainProcess] Task src.worker.run_backtest_job[1bd78222-9d5d-4c56-9641-53dae3edf44b] received
+[2026-05-11 12:37:44,062: INFO/MainProcess] Task src.worker.run_backtest_job[2199c22b-b977-41fb-b13a-5c0d8c6cea19] received
+[2026-05-11 12:37:44,064: INFO/MainProcess] Task src.worker.run_backtest_job[5eb25ab5-5ab3-4598-ad62-27d4e7fa7cd8] received
+[2026-05-11 12:37:44,084: ERROR/ForkPoolWorker-9] Error processing backtest job 2cc2143c-008d-481f-a8b1-b0c826c86545
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,084: ERROR/ForkPoolWorker-10] Error processing backtest job 9c9e08cb-df73-4096-bc54-83aff8aba5ae
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,091: ERROR/ForkPoolWorker-10] Error processing backtest job 38d9bf6d-e66d-47d9-b654-6fb3d20d6591
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,098: ERROR/ForkPoolWorker-8] Error processing backtest job eef879b6-64f5-4404-b37a-a39fa612649f
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,102: ERROR/ForkPoolWorker-9] Error processing backtest job 96a1353b-6a41-4bdb-b116-9100763e9973
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,111: ERROR/ForkPoolWorker-1] Error processing backtest job 3c96b32f-ca31-4345-9c99-d9c6ffe8f69f
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,113: ERROR/ForkPoolWorker-8] Error processing backtest job 214d6f8a-afba-488c-abfa-e7b9ac1262f9
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,113: ERROR/ForkPoolWorker-1] Error processing backtest job 6c912e29-9acf-480c-8ab4-ddac87d5314d
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,120: ERROR/ForkPoolWorker-3] Error processing backtest job 2199c22b-b977-41fb-b13a-5c0d8c6cea19
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,121: ERROR/ForkPoolWorker-9] Task src.worker.run_backtest_job[2cc2143c-008d-481f-a8b1-b0c826c86545] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,128: ERROR/ForkPoolWorker-10] Task src.worker.run_backtest_job[38d9bf6d-e66d-47d9-b654-6fb3d20d6591] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,126: ERROR/ForkPoolWorker-10] Task src.worker.run_backtest_job[9c9e08cb-df73-4096-bc54-83aff8aba5ae] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,123: ERROR/ForkPoolWorker-4] Error processing backtest job fb86aa71-9182-4d66-acc2-ed33df078df8
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,127: ERROR/ForkPoolWorker-8] Task src.worker.run_backtest_job[eef879b6-64f5-4404-b37a-a39fa612649f] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,128: ERROR/ForkPoolWorker-9] Task src.worker.run_backtest_job[96a1353b-6a41-4bdb-b116-9100763e9973] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,122: ERROR/ForkPoolWorker-6] Error processing backtest job 5eb25ab5-5ab3-4598-ad62-27d4e7fa7cd8
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,122: ERROR/ForkPoolWorker-5] Error processing backtest job 1bd78222-9d5d-4c56-9641-53dae3edf44b
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,133: ERROR/ForkPoolWorker-1] Task src.worker.run_backtest_job[3c96b32f-ca31-4345-9c99-d9c6ffe8f69f] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,123: ERROR/ForkPoolWorker-2] Error processing backtest job 03b81a5f-4d14-43fc-9496-c2584b01d6cb
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,130: ERROR/ForkPoolWorker-3] Error processing backtest job 4495b8cf-6567-446b-b501-6a3855ad0634
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,129: ERROR/ForkPoolWorker-2] Error processing backtest job 8722cde7-1c3b-46f5-8256-709e74e56b3e
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,145: ERROR/ForkPoolWorker-1] Task src.worker.run_backtest_job[6c912e29-9acf-480c-8ab4-ddac87d5314d] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,145: ERROR/ForkPoolWorker-8] Task src.worker.run_backtest_job[214d6f8a-afba-488c-abfa-e7b9ac1262f9] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,152: ERROR/ForkPoolWorker-3] Task src.worker.run_backtest_job[2199c22b-b977-41fb-b13a-5c0d8c6cea19] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,155: ERROR/ForkPoolWorker-2] Task src.worker.run_backtest_job[03b81a5f-4d14-43fc-9496-c2584b01d6cb] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,155: ERROR/ForkPoolWorker-5] Task src.worker.run_backtest_job[1bd78222-9d5d-4c56-9641-53dae3edf44b] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,155: ERROR/ForkPoolWorker-3] Task src.worker.run_backtest_job[4495b8cf-6567-446b-b501-6a3855ad0634] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,155: ERROR/ForkPoolWorker-4] Task src.worker.run_backtest_job[fb86aa71-9182-4d66-acc2-ed33df078df8] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,155: ERROR/ForkPoolWorker-6] Task src.worker.run_backtest_job[5eb25ab5-5ab3-4598-ad62-27d4e7fa7cd8] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+[2026-05-11 12:37:44,156: ERROR/ForkPoolWorker-2] Task src.worker.run_backtest_job[8722cde7-1c3b-46f5-8256-709e74e56b3e] raised unexpected: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 585, in trace_task
+    R = retval = fun(*args, **kwargs)
+                 ~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/trace.py", line 858, in __protected_call__
+    return self.run(*args, **kwargs)
+           ~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/app/autoretry.py", line 38, in run
+    return task._orig_run(*args, **kwargs)
+           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/agent/src/worker.py", line 91, in run_backtest_job
+    job_payload = VibeTradingJobPayload(**payload)
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/pydantic/main.py", line 263, in __init__
+    validated_self = self.__pydantic_validator__.validate_python(data, self_instance=self)
+pydantic_core._pydantic_core.ValidationError: 4 validation errors for VibeTradingJobPayload
+simulation_environment
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+risk_management
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+context_rules
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+execution_flags
+  Field required [type=missing, input_value={}, input_type=dict]
+    For further information visit https://errors.pydantic.dev/2.13/v/missing
+INFO:__main__:Current total queue length: 0, Active workers: 2
+INFO:__main__:Current total queue length: 0, Active workers: 2
+
+worker: Warm shutdown (MainProcess)
+
+worker: Warm shutdown (MainProcess)

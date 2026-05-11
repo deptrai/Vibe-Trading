@@ -19,6 +19,9 @@
 - Rủi ro cạn kiệt tài nguyên (OOM/DoS) khi đọc file kết quả [agent/api_server.py:1284] — API server đọc toàn bộ JSON vào bộ nhớ mà không kiểm tra kích thước.
 - Lỗ hổng bảo mật truy cập resource job của user khác [agent/api_server.py:1275] — Thiếu kiểm tra ownership job (Multi-tenancy).
 
+## Deferred from: code review of 5-3-automated-cleanup-scaling-policy.md (2026-05-11)
+- Hardcode danh sách queue trong Autoscaler [agent/src/autoscaler.py:17] — Danh sách queue bị hardcode lặp lại với file cấu hình worker.py.
+
 ## Deferred from: code review of 5-1-tiered-priority-queue-for-premium-users.md (2026-05-11)
 - Naive Timezone Handling & crash if tz-aware/tz-naive mismatch [agent/src/rl_optimizer.py:168] — deferred, pre-existing from story 3-4
 - timeframe_override invalid date format parser crash [agent/src/rl_optimizer.py:162] — deferred, pre-existing from story 3-4

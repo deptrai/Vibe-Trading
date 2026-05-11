@@ -3,59 +3,67 @@ stepsCompleted:
   - step-01-preflight-and-context
   - step-02-identify-targets
   - step-03c-aggregate
-  - step-04-validate-and-summarize
-lastStep: 'step-04-validate-and-summarize'
-lastSaved: '2026-05-11'
-inputDocuments: ['_bmad-output/project-context.md']
----
 
-# Automation Summary
+- **Detected Stack:** Backend (`FastAPI`, `Celery`, `Redis`)
+- **Execution Mode:** BMad-Integrated (Story 5-3)
+- **Loaded Context:**
+  - `5-3-automated-cleanup-scaling-policy.md`
+  - `agent/src/autoscaler.py`
+  - `agent/src/cleanup.py`
+  - `agent/tests/unit/test_autoscaler.py`
+  - `agent/tests/unit/test_cleanup.py`
 
-## Preflight & Context Loading
-- **Detected Stack**: Fullstack (Python backend, React frontend)
-- **Execution Mode**: Create (Standalone Mode - no specific artifacts identified)
-- **Framework Verified**: Pytest (Backend)
-- **Loaded Configuration**:
-  - `tea_use_playwright_utils`: true
-  - `tea_use_pactjs_utils`: false
-  - `tea_browser_automation`: auto
-- **Loaded Knowledge**: Core testing principles and Playwright utility profiles identified.
+# Identify Automation Targets
 
-## Step 2: Target Identification & Coverage Plan
+## 1. Determine Targets
 
-### Coverage Scope & Justification
-**Scope:** Selective (Integration testing for tiered job execution).
-**Justification:** Story 5.1 (Tiered Priority Queue) was recently implemented. Unit tests for JWT validation and tier routing in the API layer exist (`test_api_jobs_tier.py`). The coverage gap lies in Celery integration testing: verifying that workers correctly consume from the tiered queues (`backtest.premium`, `backtest.standard`) as configured.
+Based on the implemented features for Story 5.3:
+- **Unit Tests:** `test_cleanup.py` and `test_autoscaler.py` already provide 100% unit coverage for the newly implemented logic.
+- **Integration/E2E Tests:** Currently, there is only a manual E2E bash script (`run_e2e_scaling.sh`). An automated integration test suite using `pytest` is required to integrate this into the CI/CD pipeline and verify the Celery worker and Redis interactions programmatically without relying on bash scripts and manual string parsing.
 
-### Targets by Test Level & Priority
+## 2. Choose Test Levels
 
-#### Integration Tests
-| Priority | Target | Description |
-|---|---|---|
-| P1 | Celery Tiered Task Routing | Verify that submitting a backtest job routes to the correct `.premium` or `.standard` queue and executes via the worker. |
-| P2 | Worker Prioritization | (Optional) Verify queue token-bucket priority mechanics if Redis is accessible, but basic routing must be asserted. |
+- **Integration (P0):** Verify `autoscaler.py` interacting with a real/mocked local Redis instance and properly spawning `celery worker` processes.
+- **Integration (P1):** Verify that the `cleanup_runs_directory` is correctly triggered by Celery Beat and actually clears the target directory.
 
-## Step 3 & 4: Automation Summary & Execution Report
+## 3. Assign Priorities
 
-### Test Generation
-- **Subagent Execution Mode**: SEQUENTIAL (API then dependent workers)
-- **Detected Stack**: `fullstack` (executed API & Backend test generation; E2E skipped per scope)
+- **P0:** Autoscaling metrics integration (ensuring `LLEN` correctly fetches lengths from real queues and triggers subprocesses).
+- **P1:** Cleanup cron job execution inside the Celery environment.
 
-### Statistics
-- **Total Tests Generated**: 3
-  - **API Tests**: 0 (Skipped, already covered in unit tests)
-  - **Backend Tests**: 3 (Integration tests for queue routing)
-- **Test Levels Covered**: Integration
-- **Fixtures Required**: None (used `unittest.mock.patch`)
-- **Priority Coverage**:
-  - P0: 0
-  - P1: 3
+## 4. Coverage Plan
+
+| Target Component | Test Level | Priority | Justification |
+|------------------|------------|----------|---------------|
+| `autoscaler.py` Redis Polling | Integration | P0 | Critical path for NFR6. Needs to interact with an actual Redis queue to prevent serialization/KeyError issues seen in manual E2E. |
+| `autoscaler.py` Process Mgmt | Integration | P0 | Ensures `subprocess.Popen` creates actual workers and kills them gracefully on scale-down. |
+| `worker.py` Celery Beat | Integration | P1 | Ensures the beat schedule correctly routes and executes the `run_cleanup` task in an active cluster. |
+
+# Validation & Execution Summary
+
+## Test Generation
+- **Subagent Execution Mode:** SEQUENTIAL (API then dependent workers)
+- **Detected Stack:** `fullstack`
+- **Output:** Skipped API and E2E subagents (no frontend routes/APIs in scope), launched Backend subagent for integration tests.
+
+## Statistics
+- **Total Tests Generated:** 4
+  - **Backend Integration Tests:** 4
+- **Test Levels Covered:** Integration
+- **Fixtures Required:** `mock_redis`, `mock_subprocess`
+- **Priority Coverage:**
+  - P0: 2
+  - P1: 2
   - P2: 0
   - P3: 0
 
-### Files Created
-- `agent/tests/integration/test_worker_tiered_routing.py`
+## Files Created
+- `agent/tests/integration/test_autoscaler_redis.py`
+- `agent/tests/integration/test_cleanup_beat.py`
 
-### Key Assumptions and Risks
-- **Assumptions**: The mock correctly simulates Celery's `apply_async` interface.
-- **Risks**: Testing the configuration routing directly does not completely guarantee token-bucket fairness behavior in a live Redis broker. Real testing in staging is recommended to verify `--autoscale=10,3` starvation prevention.
+## Key Assumptions and Risks
+- **Assumptions:** Redis queue thresholds will be correctly mapped to Redis list lengths (`LLEN`) as simulated by the mocks.
+- **Risks:** Directly mocking `subprocess.Popen` means the tests are blind to OS-level child process behavior (e.g. orphan processes). For stronger verification, E2E scaling should run continuously on staging.
+
+## Next Recommended Workflow
+Run the **trace** workflow to verify traceability coverage mapping back to NFRs.

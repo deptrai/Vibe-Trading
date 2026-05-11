@@ -52,18 +52,25 @@ class WorkerAutoscaler:
         pid, process = list(self.current_workers.items())[-1]
         logger.info(f"Scaling down: Stopping worker with PID {pid}")
         process.terminate()
-        process.wait(timeout=30)
+        try:
+            process.wait(timeout=5)
+        except subprocess.TimeoutExpired:
+            logger.warning(f"Worker PID {pid} did not terminate in 5s. Killing it.")
+            process.kill()
+            process.wait()
         del self.current_workers[pid]
 
-    def get_total_queue_length(self):
-        total = 0
+    def get_max_queue_length(self):
+        max_len = 0
         try:
             for queue in self.queues_to_monitor:
-                total += self.redis_client.llen(queue)
-            return total
+                q_len = self.redis_client.llen(queue)
+                if q_len > max_len:
+                    max_len = q_len
+            return max_len
         except Exception as e:
             logger.error(f"Error checking Redis queues: {e}")
-            return 0
+            return None
 
     def check_dead_workers(self):
         dead_pids = []
@@ -85,22 +92,27 @@ class WorkerAutoscaler:
         try:
             while True:
                 self.check_dead_workers()
-                queue_length = self.get_total_queue_length()
-                logger.info(f"Current total queue length: {queue_length}, Active workers: {len(self.current_workers)}")
+                queue_length = self.get_max_queue_length()
                 
-                if queue_length > self.scale_up_threshold:
-                    self.idle_count = 0
-                    if len(self.current_workers) < self.max_workers:
-                        logger.info(f"Queue length {queue_length} exceeds threshold {self.scale_up_threshold}. Scaling up.")
-                        self.start_worker()
-                elif queue_length == 0:
-                    self.idle_count += 1
-                    if self.idle_count >= self.scale_down_idle_checks and len(self.current_workers) > self.min_workers:
-                        logger.info(f"Queue empty for {self.idle_count} checks. Scaling down.")
-                        self.stop_worker()
-                        self.idle_count = 0 # Reset to require another X checks to scale down again
+                if queue_length is None:
+                    # Redis error, do not scale down or reset idle
+                    pass
                 else:
-                    self.idle_count = 0
+                    logger.info(f"Current max queue length: {queue_length}, Active workers: {len(self.current_workers)}")
+                    
+                    if queue_length > self.scale_up_threshold:
+                        self.idle_count = 0
+                        if len(self.current_workers) < self.max_workers:
+                            logger.info(f"Queue length {queue_length} exceeds threshold {self.scale_up_threshold}. Scaling up.")
+                            self.start_worker()
+                    elif queue_length == 0:
+                        self.idle_count += 1
+                        if self.idle_count >= self.scale_down_idle_checks and len(self.current_workers) > self.min_workers:
+                            logger.info(f"Queue empty for {self.idle_count} checks. Scaling down.")
+                            self.stop_worker()
+                            self.idle_count = 0 # Reset to require another X checks to scale down again
+                    else:
+                        self.idle_count = 0
                     
                 time.sleep(self.check_interval_seconds)
                 
@@ -108,6 +120,12 @@ class WorkerAutoscaler:
             logger.info("Autoscaler shutting down. Terminating all managed workers.")
             for pid, process in self.current_workers.items():
                 process.terminate()
+            for pid, process in self.current_workers.items():
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    process.kill()
+                    process.wait()
                 
 if __name__ == "__main__":
     autoscaler = WorkerAutoscaler()
