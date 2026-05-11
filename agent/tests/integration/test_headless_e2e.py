@@ -8,12 +8,12 @@ import numpy as np
 from src.worker import run_backtest_job
 
 
-@patch('src.worker.subprocess.run')
-def test_direct_execution_bypass_llm(mock_subprocess_run, tmp_path, monkeypatch):
-    """E2E: executable_code path writes signal_engine.py and runs backtest.runner"""
+@patch('src.core.runner.Runner.execute')
+def test_direct_execution_bypass_llm(mock_runner_execute, tmp_path, monkeypatch):
+    """E2E: executable_code path writes strategy.py and runs backtest.runner"""
     monkeypatch.setenv("RUNS_DIR", str(tmp_path))
 
-    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+    mock_runner_execute.return_value = MagicMock(success=True, returncode=0, stdout="", stderr="")
 
     # Create mock market data
     dates = pd.date_range("2024-01-01", periods=100, freq="1h")
@@ -74,8 +74,8 @@ def test_direct_execution_bypass_llm(mock_subprocess_run, tmp_path, monkeypatch)
     assert "equity.csv" in result["artifacts"]
     assert "metrics.csv" in result["artifacts"]
 
-    # Worker writes signal_engine.py (not strategy.py)
-    strategy_file = job_dir / "code" / "signal_engine.py"
+    # Worker writes strategy.py (not strategy.py)
+    strategy_file = job_dir / "code" / "strategy.py"
     assert strategy_file.exists()
 
     with open(strategy_file, "r") as f:
@@ -83,13 +83,13 @@ def test_direct_execution_bypass_llm(mock_subprocess_run, tmp_path, monkeypatch)
     assert content == "def next(self): pass"
 
 
-@patch('src.worker.subprocess.run')
+@patch('src.core.runner.Runner.execute')
 @patch('src.agent.loop.AgentLoop.run_headless')
-def test_natural_language_generation(mock_run_headless, mock_subprocess_run, tmp_path, monkeypatch):
+def test_natural_language_generation(mock_run_headless, mock_runner_execute, tmp_path, monkeypatch):
     """E2E: natural_language_rules path invokes AgentLoop.run_headless then backtest.runner"""
     monkeypatch.setenv("RUNS_DIR", str(tmp_path))
 
-    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+    mock_runner_execute.return_value = MagicMock(success=True, returncode=0, stdout="", stderr="")
     mock_run_headless.return_value = {"status": "success", "run_dir": str(tmp_path / "test-job-id")}
 
     # Create mock market data

@@ -7,6 +7,7 @@ Adding a new tool:
 Tools with missing dependencies can override check_available() → False
 to be silently excluded from the registry.
 """
+from __future__ import annotations
 
 import importlib
 import logging

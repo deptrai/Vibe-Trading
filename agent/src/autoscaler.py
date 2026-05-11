@@ -82,6 +82,30 @@ class WorkerAutoscaler:
         for pid in dead_pids:
             del self.current_workers[pid]
 
+    def check_and_scale(self):
+        self.check_dead_workers()
+        queue_length = self.get_max_queue_length()
+        
+        if queue_length is None:
+            # Redis error, do not scale down or reset idle
+            return
+            
+        logger.info(f"Current max queue length: {queue_length}, Active workers: {len(self.current_workers)}")
+        
+        if queue_length > self.scale_up_threshold:
+            self.idle_count = 0
+            if len(self.current_workers) < self.max_workers:
+                logger.info(f"Queue length {queue_length} exceeds threshold {self.scale_up_threshold}. Scaling up.")
+                self.start_worker()
+        elif queue_length == 0:
+            self.idle_count += 1
+            if self.idle_count >= self.scale_down_idle_checks and len(self.current_workers) > self.min_workers:
+                logger.info(f"Queue empty for {self.idle_count} checks. Scaling down.")
+                self.stop_worker()
+                self.idle_count = 0 # Reset to require another X checks to scale down again
+        else:
+            self.idle_count = 0
+
     def run(self):
         logger.info(f"Starting WorkerAutoscaler. Min: {self.min_workers}, Max: {self.max_workers}, Threshold: {self.scale_up_threshold}")
         
@@ -91,29 +115,7 @@ class WorkerAutoscaler:
             
         try:
             while True:
-                self.check_dead_workers()
-                queue_length = self.get_max_queue_length()
-                
-                if queue_length is None:
-                    # Redis error, do not scale down or reset idle
-                    pass
-                else:
-                    logger.info(f"Current max queue length: {queue_length}, Active workers: {len(self.current_workers)}")
-                    
-                    if queue_length > self.scale_up_threshold:
-                        self.idle_count = 0
-                        if len(self.current_workers) < self.max_workers:
-                            logger.info(f"Queue length {queue_length} exceeds threshold {self.scale_up_threshold}. Scaling up.")
-                            self.start_worker()
-                    elif queue_length == 0:
-                        self.idle_count += 1
-                        if self.idle_count >= self.scale_down_idle_checks and len(self.current_workers) > self.min_workers:
-                            logger.info(f"Queue empty for {self.idle_count} checks. Scaling down.")
-                            self.stop_worker()
-                            self.idle_count = 0 # Reset to require another X checks to scale down again
-                    else:
-                        self.idle_count = 0
-                    
+                self.check_and_scale()
                 time.sleep(self.check_interval_seconds)
                 
         except KeyboardInterrupt:

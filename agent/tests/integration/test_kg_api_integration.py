@@ -35,7 +35,10 @@ def populated_store(tmp_path, monkeypatch):
     return store
 
 @pytest.fixture
-def client():
+def client(monkeypatch):
+    import api_server as _api_server
+    monkeypatch.setattr(_api_server, "_is_ip_whitelisted", lambda r: True)
+    monkeypatch.setattr(_api_server, "_API_KEY", "test-secret-key")
     return TestClient(app, raise_server_exceptions=False)
 
 def test_get_suggestions_populated(client, populated_store, auth_headers):

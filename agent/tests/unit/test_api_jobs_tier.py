@@ -38,7 +38,8 @@ def payload():
         },
         "context_rules": {
             "assets": ["BTC/USDT"],
-            "timeframe": "1h"
+            "timeframe": "1h",
+            "executable_code": "pass"
         },
         "execution_flags": {
             "enable_rl_optimization": False,

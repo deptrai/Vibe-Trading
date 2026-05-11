@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import MagicMock
-import agent.api_server as api_server
+import api_server as api_server
 
 @pytest.fixture(autouse=True)
 def reset_cached_ips():

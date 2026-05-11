@@ -38,6 +38,7 @@ def test_valid_payload(client):
         "context_rules": {
             "assets": ["BTC-USDT"],
             "timeframe": "1h",
+            "executable_code": "pass",
         },
         "execution_flags": {},
     }
@@ -161,7 +162,7 @@ def test_timeframe_minute_vs_month_disambiguation(client):
         "execution_flags": {},
     }
     for tf in ("5m", "15m", "1h", "1d", "1w", "1M", "1Y"):
-        payload = {**base, "context_rules": {**base["context_rules"], "timeframe": tf}}
+        payload = {**base, "context_rules": {**base["context_rules"], "timeframe": tf, "executable_code": "pass"}}
         response = client.post("/jobs", json=payload)
         assert response.status_code == 200, f"timeframe {tf!r} should be valid"
 

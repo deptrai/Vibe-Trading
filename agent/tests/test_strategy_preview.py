@@ -1,8 +1,8 @@
 import pytest
 import time
 from fastapi.testclient import TestClient
-from agent.api_server import app
-from agent import api_server
+from api_server import app
+import api_server
 
 @pytest.fixture
 def client(monkeypatch):
@@ -23,6 +23,7 @@ def test_preview_strategy(client):
         "context_rules": {
             "assets": ["BTC-USDT"],
             "timeframe": "1h",
+            "executable_code": "pass",
             "natural_language_rules": "Buy when RSI is below 30"
         },
         "execution_flags": {}

@@ -28,6 +28,7 @@ def get_valid_payload():
         context_rules=ContextRules(
             assets=["BTC-USDT"],
             timeframe="1h",
+            natural_language_rules="Buy when price crosses SMA(20)"
         ),
         execution_flags=ExecutionFlags()
     )
@@ -52,3 +53,21 @@ def test_valid_perpetual_leverage():
     
     payload = VibeTradingJobPayload(**payload_data)
     assert payload.risk_management.leverage == Decimal("10.0")
+
+def test_missing_code_sources():
+    payload_data = get_valid_payload().model_dump()
+    payload_data["context_rules"]["natural_language_rules"] = None
+    payload_data["context_rules"]["executable_code"] = None
+    
+    with pytest.raises(ValidationError) as exc_info:
+        VibeTradingJobPayload(**payload_data)
+        
+    assert "Either natural_language_rules or executable_code must be provided" in str(exc_info.value)
+
+def test_valid_executable_code():
+    payload_data = get_valid_payload().model_dump()
+    payload_data["context_rules"]["natural_language_rules"] = None
+    payload_data["context_rules"]["executable_code"] = "print('hello world')"
+    
+    payload = VibeTradingJobPayload(**payload_data)
+    assert payload.context_rules.executable_code == "print('hello world')"

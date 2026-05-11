@@ -26,13 +26,27 @@ def sample_payload():
         },
         "context_rules": {
             "assets": ["BTC-USDT", "AAPL"],
-            "timeframe": "1h"
+            "timeframe": "1h",
+            "executable_code": "pass"
         },
         "execution_flags": {
             "enable_monte_carlo_stress_test": False,
             "enable_rl_optimization": False
         }
     }
+
+
+@pytest.fixture(autouse=True)
+def mock_runner_execute(monkeypatch, tmp_path):
+    from src.core.runner import Runner, RunResult
+    def _mock_execute(self, entry_script, run_dir, **kwargs):
+        import os
+        os.makedirs(os.path.join(run_dir, "artifacts"), exist_ok=True)
+        with open(os.path.join(run_dir, "artifacts", "equity.csv"), "w") as f:
+            f.write("Date,equity\n2023-01-01,10000\n2023-01-02,10100\n")
+        return RunResult(success=True, exit_code=0, stdout="Mock success", stderr="", artifacts={})
+    
+    monkeypatch.setattr(Runner, "execute", _mock_execute)
 
 def test_run_backtest_job_success(monkeypatch, sample_payload, tmp_path):
     monkeypatch.setenv("RUNS_DIR", str(tmp_path))
@@ -52,8 +66,11 @@ def test_run_backtest_job_success(monkeypatch, sample_payload, tmp_path):
     
     assert result["status"] == "success"
     assert result["job_id"] == "test_job_id"
-    assert "BTC-USDT" in result["data_summary"]
-    assert "AAPL" in result["rejected_assets"]
+    import json, os
+    with open(os.path.join(str(tmp_path), "test_job_id", "metadata.json")) as f:
+        meta = json.load(f)
+    assert "BTC-USDT" in meta["data_summary"]
+    assert "AAPL" in meta["rejected_assets"]
 
 def test_run_backtest_job_2_year_constraint(monkeypatch, sample_payload, tmp_path):
     monkeypatch.setenv("RUNS_DIR", str(tmp_path))

@@ -5,6 +5,9 @@ from src.kg_store import get_kg_store
 import src.kg_crawler as crawler
 
 def test_manual_sync_trigger_and_query(monkeypatch):
+    import api_server as _api_server
+    monkeypatch.setattr(_api_server, "_is_ip_whitelisted", lambda r: True)
+    monkeypatch.setattr(_api_server, "_API_KEY", "test-secret-key")
     client = TestClient(app)
     
     # Mock the crawler's fetch functions to return controlled data

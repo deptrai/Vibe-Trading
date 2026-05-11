@@ -146,7 +146,7 @@ class TestAgentLoopCore:
         def mock_run(user_message, session_id):
             code_dir = tmp_path / "code"
             code_dir.mkdir(parents=True, exist_ok=True)
-            (code_dir / "signal_engine.py").write_text("print('hello')")
+            (code_dir / "strategy.py").write_text("print('hello')")
             return {"status": "success", "run_dir": str(tmp_path), "react_trace": [{"type": "answer", "content": "done"}]}
             
         with patch.object(loop, 'run', side_effect=mock_run) as mock_run_method:

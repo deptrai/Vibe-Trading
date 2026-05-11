@@ -268,8 +268,17 @@ def run_backtest_job(self, payload: dict) -> dict:
         # 5. Execute backtest.runner via Runner API
         from src.core.runner import Runner
         logger.info(f"Executing backtest Runner for job {self.request.id}")
-        runner = Runner(Path(job_dir))
-        runner_result = runner.execute()
+        
+        agent_root = Path(__file__).resolve().parents[1]
+        entry_script = agent_root / "backtest" / "runner.py"
+        
+        runner = Runner()
+        runner_result = runner.execute(
+            entry_script=entry_script,
+            run_dir=Path(job_dir),
+            cwd=agent_root,
+            cli_args=[str(job_dir)]
+        )
         if not runner_result.success:
             logger.error(f"Runner failed: {runner_result.stderr}")
             return {

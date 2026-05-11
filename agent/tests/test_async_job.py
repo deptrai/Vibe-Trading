@@ -1,8 +1,8 @@
 import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import MagicMock, patch
-from agent.api_server import app
-import agent.api_server as api_server
+from api_server import app
+import api_server as api_server
 
 @pytest.fixture
 def client(monkeypatch):
@@ -28,7 +28,8 @@ def test_async_job_enqueue(mock_apply_async, client):
         },
         "context_rules": {
             "assets": ["BTC-USDT"],
-            "timeframe": "1h"
+            "timeframe": "1h",
+            "executable_code": "pass"
         },
         "execution_flags": {}
     }
@@ -44,7 +45,7 @@ def test_async_job_enqueue(mock_apply_async, client):
     # Assert Celery task was called with correct payload and queue
     mock_apply_async.assert_called_once()
     kwargs = mock_apply_async.call_args.kwargs
-    assert kwargs.get("queue") == "backtest"
+    assert kwargs.get("queue") == "backtest.standard"
     args = mock_apply_async.call_args.kwargs.get("args")
     assert isinstance(args, list)
     assert args[0]["simulation_environment"]["initial_capital"] == "15000"

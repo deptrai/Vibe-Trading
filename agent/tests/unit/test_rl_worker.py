@@ -11,6 +11,7 @@ def rl_payload():
         "context_rules": {
             "assets": ["BTC/USDT"],
             "timeframe": "1d",
+            "executable_code": "pass",
         },
         "simulation_environment": {
             "historical_range": 30,
@@ -86,7 +87,8 @@ def test_rl_worker_timeout_handling():
             
             # Use a basic payload
             payload = {
-                "context_rules": {"assets": ["BTC/USDT"], "timeframe": "1d"},
+                "context_rules": {"assets": ["BTC/USDT"], "timeframe": "1d",
+            "executable_code": "pass"},
                 "simulation_environment": {"historical_range": 30, "exchange": "binance", "initial_capital": 10000, "instrument_type": "SPOT"},
                 "execution_flags": {"enable_rl_optimization": True},
                 "risk_management": {"max_drawdown_percentage": 0.2, "leverage": 1.0}
