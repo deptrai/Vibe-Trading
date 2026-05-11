@@ -57,7 +57,7 @@ def test_run_backtest_job_success(monkeypatch, sample_payload, tmp_path):
 
 def test_run_backtest_job_2_year_constraint(monkeypatch, sample_payload, tmp_path):
     monkeypatch.setenv("RUNS_DIR", str(tmp_path))
-    sample_payload["simulation_environment"]["historical_range"] = 1000
+    sample_payload["simulation_environment"]["historical_range"] = 730
     
     mock_loader_cls = MagicMock()
     mock_loader = MagicMock()

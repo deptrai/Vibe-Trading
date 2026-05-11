@@ -6,6 +6,7 @@ from src.kg_store import KnowledgeGraphStore
 
 @pytest.fixture
 def empty_store(tmp_path, monkeypatch):
+    monkeypatch.setenv("API_AUTH_KEY", "test-secret-key")
     store = KnowledgeGraphStore(data_dir=str(tmp_path))
     store.events.clear()
     store.assets.clear()

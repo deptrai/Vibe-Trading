@@ -37,8 +37,8 @@ celery_app.conf.update(
     result_expires=3600,  # Results expire in 1 hour to prevent Redis OOM
     imports=["src.kg_crawler"],
     task_routes={
-        "src.worker.run_backtest_job": {"queue": "backtest"},
-        "src.rl_worker.run_rl_optimization_job": {"queue": "rl_optimization"},
+        "src.worker.run_backtest_job": {"queue": "backtest.standard"},
+        "src.rl_worker.run_rl_optimization_job": {"queue": "rl_optimization.standard"},
         "src.kg_crawler.sync_knowledge_graph": {"queue": "kg_sync"},
         "src.worker.*": {"queue": "default"},
     },

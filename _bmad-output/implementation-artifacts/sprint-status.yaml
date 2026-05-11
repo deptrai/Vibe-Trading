@@ -58,11 +58,11 @@ development_status:
   2-6-perpetual-futures-liquidation-engine: done
   epic-2-retrospective: optional
 
-  epic-3: in-progress
+  epic-3: done
   3-1-offline-rl-strategy-tuner: done
   3-2-knowledge-graph-integration-news-to-asset: done
-  3-3-explainable-ai-xai-strategy-changes: review
-  3-4-walk-forward-analysis-wfa: backlog
+  3-3-explainable-ai-xai-strategy-changes: done
+  3-4-walk-forward-analysis-wfa: done
   epic-3-retrospective: optional
 
   epic-4: backlog
@@ -71,10 +71,10 @@ development_status:
   4-3-strategy-marketplace-publish-discovery: pending
   epic-4-retrospective: optional
 
-  epic-5: backlog
-  5-1-tiered-priority-queue-for-premium-users: backlog
+  epic-5: in-progress
+  5-1-tiered-priority-queue-for-premium-users: done
   5-2-admin-monitoring-dashboard: pending
-  5-3-automated-cleanup-scaling-policy: backlog
+  5-3-automated-cleanup-scaling-policy: ready-for-dev
   epic-5-retrospective: optional
 
   epic-6: backlog

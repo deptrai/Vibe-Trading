@@ -20,9 +20,9 @@ class RLOptimizer:
         self.start_time = time.time()
         self.is_sub_opt = False
 
-    def _save_progress(self, current_trial: int, total_trials: int, best_score: float, force: bool = False):
+    def _save_progress(self, current_trial: int, total_trials: int, best_score: float, force: bool = False, message: str = None):
         # I/O Optimization: Throttle progress file writes (every 5 trials or if forced)
-        if self.is_sub_opt:
+        if self.is_sub_opt and not force:
             return
             
         if not force and current_trial > 0 and current_trial % 5 != 0 and current_trial != total_trials:
@@ -31,9 +31,13 @@ class RLOptimizer:
         progress_data = {
             "current_trial": current_trial,
             "total_trials": total_trials,
-            "best_score_so_far": best_score,
+            "best_score": best_score,
+            "percentage": round((current_trial / total_trials) * 100, 2) if total_trials > 0 else 0,
             "elapsed_seconds": round(time.time() - self.start_time, 2)
         }
+        if message:
+            progress_data["message"] = message
+
         try:
             with open(self.progress_file, "w") as f:
                 json.dump(progress_data, f)
@@ -155,11 +159,17 @@ class RLOptimizer:
         filtered_data = market_data
         if timeframe_override:
             start_iso, end_iso = timeframe_override
+            start_dt = pd.to_datetime(start_iso)
+            end_dt = pd.to_datetime(end_iso)
             filtered_data = {}
             for s, df in market_data.items():
                 if df is not None:
-                    # Assume index is datetime
-                    mask = (df.index >= start_iso) & (df.index <= end_iso)
+                    # Ensure index is datetime and timezone matches
+                    if df.index.tz is not None and start_dt.tz is None:
+                        start_dt = start_dt.tz_localize(df.index.tz)
+                        end_dt = end_dt.tz_localize(df.index.tz)
+                    
+                    mask = (df.index >= start_dt) & (df.index <= end_dt)
                     filtered_df = df.loc[mask]
                     if not filtered_df.empty:
                         filtered_data[s] = filtered_df
@@ -233,36 +243,37 @@ class RLOptimizer:
         Perform Walk-Forward Analysis:
         Splits data into rolling windows, optimizes In-Sample, and validates Out-of-Sample.
         """
-        # Find common time range
-        all_indices = []
+        # Find common time range (Intersection)
+        common_index = None
         for df in market_data.values():
             if df is not None and not df.empty:
-                all_indices.append(df.index)
+                if common_index is None:
+                    common_index = df.index
+                else:
+                    common_index = common_index.intersection(df.index)
         
-        if not all_indices:
-            return {"status": "error", "message": "No data for WFA"}
+        if common_index is None or len(common_index) < 20:
+            return {"status": "error", "message": "Insufficient overlapping data for WFA"}
             
-        # Use first symbol as proxy for timeline
-        timeline = all_indices[0]
+        timeline = common_index
         total_points = len(timeline)
         
         is_periods = wfa_config.in_sample_periods
         oos_periods = wfa_config.out_of_sample_periods
         step = wfa_config.step_size
         
-        # Calculate window sizes in data points
-        # To achieve at least 3-10 windows, we use overlapping windows.
-        # IS = 70% of window, OOS = 30% of window (or based on config ratio)
-        total_ratio = is_periods + oos_periods
-        window_size = total_points // 4  # Each window is 25% of total data
-        if window_size < 20:
-             return {"status": "error", "message": "Data too short for WFA"}
+        # Validations
+        if is_periods <= 0 or oos_periods <= 0 or step <= 0:
+            return {"status": "error", "message": "Invalid WFA configuration: periods and step must be positive"}
 
+        # Calculate segments based on config
+        total_ratio = is_periods + oos_periods
+        window_size = total_points // 4  # Initial heuristic: each window is 25% of data
         is_size = int(window_size * (is_periods / total_ratio))
         oos_size = window_size - is_size
         
-        # We want ~10 windows, so step should be (total_points - window_size) // 10
-        step_size = max(1, (total_points - window_size) // 10)
+        # Step size in data points based on user config relative to window
+        step_size = max(1, int(window_size * (step / total_ratio)))
         
         windows = []
         start_idx = 0
@@ -277,20 +288,21 @@ class RLOptimizer:
                 "oos": (oos_start.isoformat(), oos_end.isoformat())
             })
             start_idx += step_size
-            if len(windows) >= 20: # Cap at 20 windows to avoid excessive compute
+            if len(windows) >= 20: 
                 break
 
         if len(windows) < 3:
             return {
                 "status": "error", 
-                "message": f"WFA requires at least 3 windows, but only {len(windows)} possible with current data."
+                "message": f"WFA requires at least 3 windows. Current data/config only allows {len(windows)}."
             }
 
         logger.info(f"Starting WFA with {len(windows)} windows")
         wfa_results = []
         
         for i, win in enumerate(windows):
-            logger.info(f"WFA Window {i+1}/{len(windows)}: IS={win['is']}, OOS={win['oos']}")
+            msg = f"Processing WFA window {i+1}/{len(windows)}..."
+            self._save_progress(0, self.max_trials, self.best_score_so_far, force=True, message=msg)
             
             # 1. Optimize In-Sample
             is_res = self.optimize(market_data, callbacks=callbacks, timeframe_override=win["is"])
@@ -301,18 +313,33 @@ class RLOptimizer:
             is_score = is_res["best_score"]
             
             # 2. Validate Out-of-Sample
-            # Filter data for OOS range
+            oos_start_str, oos_end_str = win["oos"]
+            start_dt = pd.to_datetime(oos_start_str)
+            end_dt = pd.to_datetime(oos_end_str)
+            
             oos_data = {}
-            oos_start, oos_end = win["oos"]
             for s, df in market_data.items():
-                mask = (df.index >= oos_start) & (df.index <= oos_end)
+                if df.index.tz is not None and start_dt.tz is None:
+                    start_dt = start_dt.tz_localize(df.index.tz)
+                    end_dt = end_dt.tz_localize(df.index.tz)
+                mask = (df.index >= start_dt) & (df.index <= end_dt)
                 f_df = df.loc[mask]
                 if not f_df.empty:
                     oos_data[s] = f_df
             
-            oos_score_dec = self._simulate_backtest(best_params, oos_data)
-            oos_score = float(oos_score_dec)
+            oos_score = 0.0
+            if oos_data:
+                oos_score_dec = self._simulate_backtest(best_params, oos_data)
+                oos_score = float(oos_score_dec)
             
+            # Decay calculation: handle negative scores correctly
+            if is_score > 0:
+                decay = (oos_score / is_score - 1)
+            elif is_score < 0:
+                decay = (is_score - oos_score) / abs(is_score)
+            else:
+                decay = 0.0
+
             wfa_results.append({
                 "window": i + 1,
                 "is_range": win["is"],
@@ -320,21 +347,25 @@ class RLOptimizer:
                 "is_score": is_score,
                 "oos_score": oos_score,
                 "params": best_params,
-                "decay": (oos_score / is_score - 1) if is_score != 0 else 0.0
+                "decay": round(decay, 4)
             })
 
         # Final Aggregation
         is_mean = np.mean([r["is_score"] for r in wfa_results]) if wfa_results else 0.0
         oos_mean = np.mean([r["oos_score"] for r in wfa_results]) if wfa_results else 0.0
-        overall_decay = (oos_mean / is_mean - 1) if is_mean != 0 else 0.0
+        overall_decay = (oos_mean / is_mean - 1) if is_mean > 0 else 0.0
         
-        # Also run a final optimization on the full dataset to get the "current best"
+        # Final optimization on full data
+        self._save_progress(0, self.max_trials, self.best_score_so_far, force=True, message="Final full-dataset optimization...")
         final_res = self.optimize(market_data, callbacks=callbacks)
         
+        if final_res["status"] == "error":
+             return final_res
+
         final_res["wfa"] = {
-            "is_mean_score": is_mean,
-            "oos_mean_score": oos_mean,
-            "decay_rate": overall_decay,
+            "is_mean_score": round(is_mean, 4),
+            "oos_mean_score": round(oos_mean, 4),
+            "decay_rate": round(overall_decay, 4),
             "windows": wfa_results
         }
         

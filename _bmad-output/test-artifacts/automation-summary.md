@@ -4,77 +4,58 @@ stepsCompleted:
   - step-02-identify-targets
   - step-03c-aggregate
   - step-04-validate-and-summarize
-lastStep: step-04-validate-and-summarize
-lastSaved: '2026-05-11T04:15:00+07:00'
-inputDocuments:
-  - _bmad-output/implementation-artifacts/3-2-knowledge-graph-integration-news-to-asset.md
-  - _bmad-output/project-context.md
-  - agent/tests/unit/test_kg_api.py
-  - agent/tests/unit/test_kg_crawler.py
-  - agent/tests/unit/test_kg_store.py
-  - agent/tests/unit/test_kg_seed.py
+lastStep: 'step-04-validate-and-summarize'
+lastSaved: '2026-05-11'
+inputDocuments: ['_bmad-output/project-context.md']
 ---
 
-## Step 1: Preflight & Context Loading Summary
+# Automation Summary
 
-- **Execution Mode:** Create (BMad-Integrated Mode)
-- **Detected Stack:** `fullstack` (Backend in `agent/` with Pytest, Frontend in `frontend/` with Vite/React and Playwright)
-- **Framework Status:** Verified (Pytest detected in `agent/tests/`, Playwright detected in `frontend/package.json`)
-- **Loaded Context:**
-  - Story: `3-2-knowledge-graph-integration-news-to-asset.md`
-  - Tech Specs & Rules: `project-context.md`
-  - Existing Tests: `test_kg_store.py`, `test_kg_crawler.py`, `test_kg_api.py`, `test_kg_seed.py`
-- **Knowledge Base Fragments Loaded:** Core testing patterns, CI/CD burn-in guidelines, Pytest testing structure.
+## Preflight & Context Loading
+- **Detected Stack**: Fullstack (Python backend, React frontend)
+- **Execution Mode**: Create (Standalone Mode - no specific artifacts identified)
+- **Framework Verified**: Pytest (Backend)
+- **Loaded Configuration**:
+  - `tea_use_playwright_utils`: true
+  - `tea_use_pactjs_utils`: false
+  - `tea_browser_automation`: auto
+- **Loaded Knowledge**: Core testing principles and Playwright utility profiles identified.
 
 ## Step 2: Target Identification & Coverage Plan
 
 ### Coverage Scope & Justification
-**Scope:** Selective (Backend-only integration and error resilience).
-**Justification:** Frontend components for this story are deferred. Existing unit tests cover basic graph logic (`kg_store`) and pure extraction functions. The major gaps lie in integration points (API responses with populated data) and error resilience (network timeouts during crawler ingestion, API fallback). E2E is skipped since no UI is built yet. Priority is given to integration testing.
+**Scope:** Selective (Integration testing for tiered job execution).
+**Justification:** Story 5.1 (Tiered Priority Queue) was recently implemented. Unit tests for JWT validation and tier routing in the API layer exist (`test_api_jobs_tier.py`). The coverage gap lies in Celery integration testing: verifying that workers correctly consume from the tiered queues (`backtest.premium`, `backtest.standard`) as configured.
 
 ### Targets by Test Level & Priority
 
 #### Integration Tests
 | Priority | Target | Description |
 |---|---|---|
-| P1 | `GET /api/v1/kg/suggestions` | Verify populated graph responses, sorting, limits, min_weight filters, auth requirements. |
-| P1 | `GET /api/v1/kg/events` & `stats`| Verify populated data retrieval and date window filtering. |
-| P1 | `POST /api/v1/kg/sync` | Trigger manual sync and verify it calls the Celery task (mocked). |
-| P2 | Graceful Degradation | Verify API endpoints do not crash when the graph store fails or raises unexpected errors. |
-
-#### Unit Tests
-| Priority | Target | Description |
-|---|---|---|
-| P1 | `kg_crawler.fetch_crypto_news` | Mock HTTP requests to verify primary API parsing and fallback API sequence. |
-| P1 | `kg_crawler.sync_knowledge_graph`| Validate error handling during crawler execution (timeouts, 500s) to ensure worker doesn't crash. |
+| P1 | Celery Tiered Task Routing | Verify that submitting a backtest job routes to the correct `.premium` or `.standard` queue and executes via the worker. |
+| P2 | Worker Prioritization | (Optional) Verify queue token-bucket priority mechanics if Redis is accessible, but basic routing must be asserted. |
 
 ## Step 3 & 4: Automation Summary & Execution Report
 
 ### Test Generation
-- **Subagent Execution Mode:** SEQUENTIAL (API then dependent workers)
-- **Detected Stack:** `fullstack` (executed API & Backend test generation; E2E deferred)
+- **Subagent Execution Mode**: SEQUENTIAL (API then dependent workers)
+- **Detected Stack**: `fullstack` (executed API & Backend test generation; E2E skipped per scope)
 
 ### Statistics
-- **Total Tests Generated:** 10
-  - **API Tests:** 6 (1 file)
-  - **Backend Tests:** 4 (1 file)
-- **Test Levels Covered:** Unit, Integration
-- **Fixtures Required:** `auth_headers`, `populated_store`, `mock_requests`
-- **Priority Coverage:**
+- **Total Tests Generated**: 3
+  - **API Tests**: 0 (Skipped, already covered in unit tests)
+  - **Backend Tests**: 3 (Integration tests for queue routing)
+- **Test Levels Covered**: Integration
+- **Fixtures Required**: None (used `unittest.mock.patch`)
+- **Priority Coverage**:
   - P0: 0
-  - P1: 9
-  - P2: 1
+  - P1: 3
+  - P2: 0
   - P3: 0
 
 ### Files Created
-- `agent/tests/integration/test_kg_api_integration.py`
-- `agent/tests/unit/test_kg_crawler_network.py`
+- `agent/tests/integration/test_worker_tiered_routing.py`
 
 ### Key Assumptions and Risks
-- **Assumptions:** The integration test fixture `populated_store` accurately simulates an initialized in-memory database by directly mutating `_kg_store_instance`.
-- **Risks:** The network mocks in `test_kg_crawler_network.py` simulate expected CryptoCompare/CoinGecko JSON structures based on existing parser logic; if the live API significantly alters its schema, these mocks will pass but production will fail. This should be addressed via contract tests or live burn-in environments later.
-
-### Next Steps
-Test automation for Story 3.2 is complete! The codebase now features robust backend integration tests and crawler error handling.
-Recommended next step:
-- Run Code Review (`bmad-code-review`) on the generated tests and implementation.
+- **Assumptions**: The mock correctly simulates Celery's `apply_async` interface.
+- **Risks**: Testing the configuration routing directly does not completely guarantee token-bucket fairness behavior in a live Redis broker. Real testing in staging is recommended to verify `--autoscale=10,3` starvation prevention.

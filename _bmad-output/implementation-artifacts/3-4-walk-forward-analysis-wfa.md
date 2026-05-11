@@ -97,8 +97,28 @@ We implemented a rolling window generator with overlap to maximize the number of
   - [x] Subtask 3.2: Verify Decay Rate accuracy
   - [x] Subtask 3.3: Verify "Too short data" error path
 
+- [x] Task 4: Formal Testing
+  - [x] Subtask 4.1: Create `agent/tests/unit/test_wfa_optimizer.py`
+  - [x] Subtask 4.2: Test `walk_forward_optimize` window generation logic
+  - [x] Subtask 4.3: Test `walk_forward_optimize` aggregation and decay calculation
+  - [x] Subtask 4.4: Verify result file persistence with WFA block
+
+### Review Findings
+
+- [x] [Review][Decision] Mất tín hiệu tiến độ (Progress) khi chạy WFA — **Resolved 2026-05-11**: Chọn phương án Window-based Progress. Cập nhật tiến độ dựa trên số cửa sổ đã hoàn thành để tối ưu UX/IO.
+- [x] [Review][Patch] Cấu hình người dùng bị bỏ qua trong chia cửa sổ WFA [rl_optimizer.py:226, 233] — **Resolved 2026-05-11**
+- [x] [Review][Patch] Lỗi chia cho 0 khi `is_periods + oos_periods` bằng 0 [rl_optimizer.py:226] — **Resolved 2026-05-11**
+- [x] [Review][Patch] Tỷ lệ Decay sai lệch khi Score mang giá trị âm [rl_optimizer.py:283] — **Resolved 2026-05-11**
+- [x] [Review][Patch] Crash khi final optimization trả về lỗi [rl_optimizer.py:290] — **Resolved 2026-05-11**
+- [x] [Review][Patch] Rủi rỏ lệch mốc thời gian khi dùng symbol đầu tiên làm proxy [rl_optimizer.py:217] — **Resolved 2026-05-11**
+- [x] [Review][Patch] So sánh ngày tháng dựa trên string không an toàn [rl_optimizer.py:159] — **Resolved 2026-05-11**
+- [x] [Review][Defer] Rủi ro cạn kiệt tài nguyên (OOM/DoS) khi đọc file kết quả [api_server.py:1284] — deferred, pre-existing
+- [x] [Review][Defer] Lỗ hổng bảo mật truy cập resource job của user khác [api_server.py:1275] — deferred, pre-existing architecture issue
+
 ---
 
+## Developer Context
+...
 ## File List
 
 | File | Status | Description |
@@ -106,10 +126,23 @@ We implemented a rolling window generator with overlap to maximize the number of
 | `agent/src/rl_optimizer.py` | MODIFIED | Added WFA core logic |
 | `agent/src/rl_worker.py` | MODIFIED | Added WFA routing |
 | `agent/api_server.py` | MODIFIED | Added results retrieval endpoint |
+| `agent/tests/unit/test_wfa_optimizer.py` | CREATED | Unit tests for Walk-Forward Analysis |
 | `_bmad-output/implementation-artifacts/3-4-walk-forward-analysis-wfa.md` | CREATED | This artifact |
 
 ---
 
 ## Change Log
 
-- **2026-05-11:** (Gemini CLI) Story implemented and verified. WFA core logic handles overlapping windows and provides comprehensive decay analysis.
+- **2026-05-11:** (Gemini CLI) Story implemented and verified. WFA core logic handles overlapping windows and provides comprehensive decay analysis. Added unit tests for WFA logic.
+
+## Dev Agent Record (Debug Log / Implementation Plan)
+
+### Implementation Plan
+1. **Window Splitting**: Implemented overlapping rolling windows in `RLOptimizer` to ensure robust testing even with limited data.
+2. **IS/OOS Loop**: Standardized the loop to optimize on In-Sample data and immediately validate on Out-of-Sample data.
+3. **Decay Calculation**: Added automated calculation of performance decay across all windows.
+4. **Integration**: Wired the `wfa_config` from the API payload through the worker to the optimizer.
+5. **Validation**: Verified logic with unit tests covering window generation, result aggregation, and edge cases (insufficient data).
+
+### Completion Notes
+The Walk-Forward Analysis feature is fully implemented and tested. It provides a crucial safeguard against overfitting by validating optimized parameters on unseen data segments. The API now returns a detailed `wfa` result block containing per-window metrics and an overall decay rate.

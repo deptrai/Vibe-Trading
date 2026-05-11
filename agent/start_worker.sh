@@ -11,6 +11,15 @@ fi
 # Ensure Python path is set correctly
 export PYTHONPATH="${PYTHONPATH}:$(pwd)"
 
-# Start Celery worker targeting the 'backtest' and 'default' queues
-echo "Starting Vibe-Trading Celery Worker..."
-celery -A src.worker.celery_app worker --loglevel=info -Q backtest,default
+# Start Celery workers using dedicated pools.
+# Fairness implementation: Dedicated processes guarantee that standard jobs 
+# are never fully starved by premium jobs, while premium jobs get more resources.
+echo "Starting Vibe-Trading Celery Workers (Dedicated Pools)..."
+
+# Premium worker: dedicated pool for premium jobs
+celery -A src.worker.celery_app worker --loglevel=info -n premium@%h --autoscale=10,3 -Q backtest.premium,rl_optimization.premium &
+
+# Standard worker: dedicated pool for standard and default jobs
+celery -A src.worker.celery_app worker --loglevel=info -n standard@%h --autoscale=3,1 -Q backtest.standard,rl_optimization.standard,default
+
+wait

@@ -128,6 +128,7 @@ class VibeTradingJobPayload(_StrictModel):
     risk_management: RiskManagement
     context_rules: ContextRules
     execution_flags: ExecutionFlags
+    user_tier: Optional[str] = Field(default="standard")
 
     @model_validator(mode="after")
     def validate_cross_fields(self) -> VibeTradingJobPayload:

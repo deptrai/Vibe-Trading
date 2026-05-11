@@ -13,6 +13,7 @@ import ipaddress
 import json
 import os
 import signal
+import jwt
 import time
 import csv
 import uuid
@@ -1198,22 +1199,48 @@ async def health_check():
 
 
 @app.post("/jobs", dependencies=[Depends(require_auth)])
-async def create_job(payload: VibeTradingJobPayload):
+async def create_job(payload: VibeTradingJobPayload, cred: Optional[HTTPAuthorizationCredentials] = Security(_security)):
     """Validate incoming payload and enqueue a job."""
     try:
+        # Extract user_tier from JWT
+        extracted_tier = "standard"
+        if cred and cred.credentials:
+            jwt_secret = os.getenv("JWT_SECRET")
+            if jwt_secret:
+                try:
+                    jwt_payload = jwt.decode(cred.credentials, jwt_secret, algorithms=["HS256"])
+                    if isinstance(jwt_payload, dict):
+                        extracted_tier = jwt_payload.get("user_tier", "standard")
+                except jwt.InvalidTokenError:
+                    logger.warning("Invalid JWT token received; falling back to standard queue.")
+            else:
+                logger.warning("JWT_SECRET missing; falling back to standard queue.")
+        else:
+            logger.warning("JWT credentials missing; falling back to standard queue.")
+
+        if extracted_tier not in ["premium", "standard"]:
+            logger.warning(f"Invalid user_tier '{extracted_tier}' received; falling back to standard queue.")
+            extracted_tier = "standard"
+
+        # Avoid mutating the validated payload; construct the dump dict and inject verified tier
+        payload_dump = payload.model_dump(mode="json")
+        payload_dump["user_tier"] = extracted_tier
+
         if getattr(payload.execution_flags, "enable_rl_optimization", False):
             from src.rl_worker import run_rl_optimization_job
+            queue_name = f"rl_optimization.{extracted_tier}"
             task = await asyncio.to_thread(
                 run_rl_optimization_job.apply_async,
-                args=[payload.model_dump(mode="json")],
-                queue="rl_optimization"
+                args=[payload_dump],
+                queue=queue_name
             )
         else:
             from src.worker import run_backtest_job
+            queue_name = f"backtest.{extracted_tier}"
             task = await asyncio.to_thread(
                 run_backtest_job.apply_async,
-                args=[payload.model_dump(mode="json")],
-                queue="backtest"
+                args=[payload_dump],
+                queue=queue_name
             )
         return {"status": "accepted", "job_id": task.id}
     except Exception as e:

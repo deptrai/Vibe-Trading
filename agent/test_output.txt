@@ -1,0 +1,73 @@
+============================= test session starts ==============================
+platform darwin -- Python 3.13.12, pytest-9.0.3, pluggy-1.6.0 -- /Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/bin/python3
+cachedir: .pytest_cache
+rootdir: /Users/luisphan/Documents/GitHub/Vibe-Trading
+configfile: pyproject.toml
+plugins: mock-3.15.1, langsmith-0.8.3, anyio-4.13.0
+collecting ... collected 5 items
+
+tests/unit/test_api_jobs_tier.py::test_create_job_missing_jwt FAILED     [ 20%]
+tests/unit/test_api_jobs_tier.py::test_create_job_invalid_jwt FAILED     [ 40%]
+tests/unit/test_api_jobs_tier.py::test_create_job_valid_premium_jwt FAILED [ 60%]
+tests/unit/test_api_jobs_tier.py::test_create_job_valid_standard_jwt FAILED [ 80%]
+tests/unit/test_api_jobs_tier.py::test_create_rl_job_premium FAILED      [100%]
+
+=================================== FAILURES ===================================
+_________________________ test_create_job_missing_jwt __________________________
+tests/unit/test_api_jobs_tier.py:40: in test_create_job_missing_jwt
+    assert response.status_code == 200
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+_________________________ test_create_job_invalid_jwt __________________________
+tests/unit/test_api_jobs_tier.py:49: in test_create_job_invalid_jwt
+    assert response.status_code == 200
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+______________________ test_create_job_valid_premium_jwt _______________________
+tests/unit/test_api_jobs_tier.py:59: in test_create_job_valid_premium_jwt
+    assert response.status_code == 200
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+______________________ test_create_job_valid_standard_jwt ______________________
+tests/unit/test_api_jobs_tier.py:69: in test_create_job_valid_standard_jwt
+    assert response.status_code == 200
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+__________________________ test_create_rl_job_premium __________________________
+tests/unit/test_api_jobs_tier.py:79: in test_create_rl_job_premium
+    assert response.status_code == 200
+E   assert 422 == 200
+E    +  where 422 = <Response [422 Unprocessable Entity]>.status_code
+=============================== warnings summary ===============================
+api_server.py:275
+  /Users/luisphan/Documents/GitHub/Vibe-Trading/agent/api_server.py:275: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    @app.on_event("startup")
+
+../.venv/lib/python3.13/site-packages/fastapi/applications.py:4598
+  /Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/fastapi/applications.py:4598: DeprecationWarning: 
+          on_event is deprecated, use lifespan event handlers instead.
+  
+          Read more about it in the
+          [FastAPI docs for Lifespan Events](https://fastapi.tiangolo.com/advanced/events/).
+          
+    return self.router.on_event(event_type)  # ty: ignore[deprecated]
+
+agent/tests/unit/test_api_jobs_tier.py::test_create_job_valid_premium_jwt
+agent/tests/unit/test_api_jobs_tier.py::test_create_job_valid_standard_jwt
+agent/tests/unit/test_api_jobs_tier.py::test_create_rl_job_premium
+  /Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/jwt/api_jwt.py:147: InsecureKeyLengthWarning: The HMAC key is 11 bytes long, which is below the minimum recommended length of 32 bytes for SHA256. See RFC 7518 Section 3.2.
+    return self._jws.encode(
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_api_jobs_tier.py::test_create_job_missing_jwt - assert...
+FAILED tests/unit/test_api_jobs_tier.py::test_create_job_invalid_jwt - assert...
+FAILED tests/unit/test_api_jobs_tier.py::test_create_job_valid_premium_jwt - ...
+FAILED tests/unit/test_api_jobs_tier.py::test_create_job_valid_standard_jwt
+FAILED tests/unit/test_api_jobs_tier.py::test_create_rl_job_premium - assert ...
+======================== 5 failed, 5 warnings in 1.39s =========================
