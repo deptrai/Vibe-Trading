@@ -4,7 +4,10 @@ from api_server import app
 from src.kg_store import get_kg_store
 import src.kg_crawler as crawler
 
-def test_manual_sync_trigger_and_query(monkeypatch):
+from unittest.mock import patch
+
+@patch("celery.app.task.Task.delay")
+def test_manual_sync_trigger_and_query(mock_delay, monkeypatch):
     import api_server as _api_server
     monkeypatch.setattr(_api_server, "_is_ip_whitelisted", lambda r: True)
     monkeypatch.setattr(_api_server, "_API_KEY", "test-secret-key")

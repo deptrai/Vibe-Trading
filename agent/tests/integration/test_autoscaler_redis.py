@@ -38,6 +38,7 @@ class TestAutoscalerIntegration:
         
         autoscaler = WorkerAutoscaler()
         autoscaler.scale_down_idle_checks = 2
+        autoscaler.min_workers = 0
         
         # Mock active worker
         mock_process = MagicMock()

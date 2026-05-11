@@ -72,7 +72,7 @@ def test_kg_stats(client, populated_store, auth_headers):
     assert data["num_assets"] == 2
     assert data["num_events"] == 2
 
-@patch("api_server.sync_knowledge_graph.delay")
+@patch("celery.app.task.Task.delay")
 def test_manual_sync_trigger(mock_delay, client, auth_headers):
     """[P1] should trigger manual sync and enqueue task"""
     response = client.post("/api/v1/kg/sync", headers=auth_headers)
