@@ -20,6 +20,14 @@ echo "Starting Vibe-Trading Celery Workers (Dedicated Pools)..."
 celery -A src.worker.celery_app worker --loglevel=info -n premium@%h --autoscale=10,3 -Q backtest.premium,rl_optimization.premium &
 
 # Standard worker: dedicated pool for standard and default jobs
-celery -A src.worker.celery_app worker --loglevel=info -n standard@%h --autoscale=3,1 -Q backtest.standard,rl_optimization.standard,default
+celery -A src.worker.celery_app worker --loglevel=info -n standard@%h --autoscale=3,1 -Q backtest.standard,rl_optimization.standard,default &
+
+# Start Celery Beat for scheduled tasks (Cleanup)
+echo "Starting Celery Beat..."
+celery -A src.worker.celery_app beat --loglevel=info &
+
+# Start the Custom Autoscaler Daemon
+echo "Starting Custom Autoscaler..."
+python src/autoscaler.py &
 
 wait

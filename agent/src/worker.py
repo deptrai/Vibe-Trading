@@ -47,8 +47,24 @@ celery_app.conf.update(
             "task": "src.kg_crawler.sync_knowledge_graph",
             "schedule": float(os.getenv("KG_SYNC_INTERVAL_MINUTES", "5")) * 60,
         },
+        "cleanup-runs-directory": {
+            "task": "src.worker.run_cleanup",
+            "schedule": float(os.getenv("CLEANUP_INTERVAL_MINUTES", "60")) * 60,
+        },
     },
 )
+
+@celery_app.task(name="src.worker.run_cleanup", bind=True)
+def run_cleanup(self):
+    """Periodic task to clean up old or large run artifacts."""
+    from src.cleanup import cleanup_runs_directory
+    try:
+        runs_dir = os.environ.get("RUNS_DIR", DEFAULT_RUNS_DIR)
+        deleted = cleanup_runs_directory(runs_dir)
+        return {"status": "success", "deleted_paths": deleted}
+    except Exception as e:
+        logger.error(f"Failed to run cleanup task: {e}")
+        return {"status": "failed", "error": str(e)}
 
 def _is_dex_exchange(exchange: str) -> bool:
     """Identify decentralized exchanges more robustly."""

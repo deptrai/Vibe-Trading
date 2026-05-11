@@ -74,7 +74,7 @@ development_status:
   epic-5: in-progress
   5-1-tiered-priority-queue-for-premium-users: done
   5-2-admin-monitoring-dashboard: pending
-  5-3-automated-cleanup-scaling-policy: ready-for-dev
+  5-3-automated-cleanup-scaling-policy: review
   epic-5-retrospective: optional
 
   epic-6: backlog
