@@ -1,0 +1,53 @@
+ 
+ -------------- premium@MacBook-Pro-cua-Luis.local v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- macOS-26.0-arm64-arm-64bit-Mach-O 2026-05-11 12:29:22
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         vibe_trading_worker:0x1129aeba0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 10 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> backtest.premium exchange=backtest.premium(direct) key=backtest.premium
+                .> rl_optimization.premium exchange=rl_optimization.premium(direct) key=rl_optimization.premium
+
+[tasks]
+  . src.kg_crawler.sync_knowledge_graph
+  . src.worker.run_backtest_job
+
+[2026-05-11 12:29:24,104: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-05-11 12:29:24,107: INFO/MainProcess] mingle: searching for neighbors
+[2026-05-11 12:29:25,130: INFO/MainProcess] mingle: all alone
+[2026-05-11 12:29:25,154: INFO/MainProcess] premium@MacBook-Pro-cua-Luis.local ready.
+[2026-05-11 12:29:26,331: INFO/MainProcess] Task src.worker.run_backtest_job[20aaef58-063a-4c08-8def-1be7a3899032] received
+[2026-05-11 12:29:26,420: ERROR/MainProcess] Received unregistered task of type 'src.rl_worker.run_rl_optimization_job'.
+The message has been ignored and discarded.
+
+Did you remember to import the module containing this task?
+Or maybe you're using relative imports?
+
+Please see
+https://docs.celeryq.dev/en/latest/internals/protocol.html
+for more information.
+
+The full contents of the message body was:
+b'[[{"simulation_environment": {"exchange": "binance", "instrument_type": "SPOT", "initial_capital": "10000.0", "trading_fees": "0.001", "slippage_tolerance": "0.001", "historical_range": 30, "gas_fee_model": "default", "track_impermanent_loss": true}, "risk_management": {"max_drawdown_percentage": "0.2", "stop_loss": null, "take_profit": null, "position_sizing": "0.1", "leverage": "1.0"}, "context_rules": {"assets": ["ETH/USDT", "BTC/USDT"], "timeframe": "1d", "indicators": [], "natural_language_rules": null, "executable_code": null}, "execution_flags": {"enable_monte_carlo_stress_test": false, "enable_rl_optimization": true, "rl_max_trials": 50, "rl_optimization_target": "sharpe", "wfa_config": null}, "user_tier": "premium"}], {}, {"callbacks": null, "errbacks": null, "chain": null, "chord": null}]' (809b)
+
+The full contents of the message headers:
+{'lang': 'py', 'task': 'src.rl_worker.run_rl_optimization_job', 'id': '8f52e25f-e4d7-4efb-975f-143bf90a473d', 'shadow': None, 'eta': None, 'expires': None, 'group': None, 'group_index': None, 'retries': 0, 'timelimit': [2100, 1800], 'root_id': '8f52e25f-e4d7-4efb-975f-143bf90a473d', 'parent_id': None, 'argsrepr': "[{'simulation_environment': {'exchange': 'binance', 'instrument_type': 'SPOT', 'initial_capital': '10000.0', 'trading_fees': '0.001', 'slippage_tolerance': '0.001', 'historical_range': 30, 'gas_fee_model': 'default', 'track_impermanent_loss': True}, 'risk_management': {'max_drawdown_percentage': '0.2', 'stop_loss': None, 'take_profit': None, 'position_sizing': '0.1', 'leverage': '1.0'}, 'context_rules': {'assets': [...], 'timeframe': '1d', 'indicators': [...], 'natural_language_rules': None, 'executable_code': None}, 'execution_flags': {'enable_monte_carlo_stress_test': False, 'enable_rl_optimization': True, 'rl_max_trials': 50, 'rl_optimization_target': 'sharpe', 'wfa_config': None}, 'user_tier': 'premium'}]", 'kwargsrepr': '{}', 'origin': 'gen83990@MacBook-Pro-cua-Luis.local', 'ignore_result': False, 'replaced_task_nesting': 0, 'stamped_headers': None, 'stamps': {}}
+
+The delivery info for this task is:
+{'exchange': '', 'routing_key': 'rl_optimization.premium'}
+Traceback (most recent call last):
+  File "/Users/luisphan/Documents/GitHub/Vibe-Trading/.venv/lib/python3.13/site-packages/celery/worker/consumer/consumer.py", line 668, in on_task_received
+    strategy = strategies[type_]
+               ~~~~~~~~~~^^^^^^^
+KeyError: 'src.rl_worker.run_rl_optimization_job'
+
+worker: Warm shutdown (MainProcess)
+[2026-05-11 12:29:26,501: INFO/ForkPoolWorker-8] Loading data for ['ETH/USDT', 'BTC/USDT'] from binance via ccxt...
+2026-05-11 12:29:28.625 python3[84023:14608588] +[NSXPCSharedListener endpointForReply:withListenerName:replyErrorCode:]: an error occurred while attempting to obtain endpoint for listener 'ClientCallsAuxiliary': Connection invalid
+[2026-05-11 12:29:28,852: INFO/ForkPoolWorker-8] Task src.worker.run_backtest_job[20aaef58-063a-4c08-8def-1be7a3899032] succeeded in 2.5193151669809595s: {'status': 'success', 'job_id': '20aaef58-063a-4c08-8def-1be7a3899032', 'message': 'Backtest data loaded successfully', 'rejected_assets': [], 'data_summary': {'ETH/USDT': {'rows_fetched': 30, 'first_date': '2026-04-12T00:00:00', 'last_date': '2026-05-11T00:00:00', 'saved_to': '/private/tmp/vibe-trading/runs/20aaef58-063a-4c08-8def-1be7a3899032/ETH_USDT.csv', 'plot_path': '/private/tmp/vibe-trading/runs/20aaef58-063a-4c08-8def-1be7a3899032/ETH_USDT_price.png'}, 'BTC/USDT': {'rows_fetched': 30, 'first_date': '2026-04-12T00:00:00', 'last_date': '2026-05-11T00:00:00', 'saved_to': '/private/tmp/vibe-trading/runs/20aaef58-063a-4c08-8def-1be7a3899032/BTC_USDT.csv', 'plot_path': '/private/tmp/vibe-trading/runs/20aaef58-063a-4c08-8def-1be7a3899032/BTC_USDT_price.png'}}, 'payload_received': {'simulation_environment': {'exchange': 'binance', 'instrument_type': 'SPOT', 'initial_capital': '10000.0', 'trading_fees': '0.001', 'slippage_tolerance': '0.001', 'historical_range': 30, 'gas_fee_model': 'default', 'track_impermane...', ...}}}

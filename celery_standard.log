@@ -1,0 +1,31 @@
+ 
+ -------------- standard@MacBook-Pro-cua-Luis.local v5.6.3 (recovery)
+--- ***** ----- 
+-- ******* ---- macOS-26.0-arm64-arm-64bit-Mach-O 2026-05-11 12:29:22
+- *** --- * --- 
+- ** ---------- [config]
+- ** ---------- .> app:         vibe_trading_worker:0x110442ba0
+- ** ---------- .> transport:   redis://localhost:6379/0
+- ** ---------- .> results:     redis://localhost:6379/0
+- *** --- * --- .> concurrency: 10 (prefork)
+-- ******* ---- .> task events: OFF (enable -E to monitor tasks in this worker)
+--- ***** ----- 
+ -------------- [queues]
+                .> backtest.standard exchange=backtest.standard(direct) key=backtest.standard
+                .> default          exchange=default(direct) key=default
+                .> rl_optimization.standard exchange=rl_optimization.standard(direct) key=rl_optimization.standard
+
+[tasks]
+  . src.kg_crawler.sync_knowledge_graph
+  . src.worker.run_backtest_job
+
+[2026-05-11 12:29:24,105: INFO/MainProcess] Connected to redis://localhost:6379/0
+[2026-05-11 12:29:24,108: INFO/MainProcess] mingle: searching for neighbors
+[2026-05-11 12:29:25,130: INFO/MainProcess] mingle: all alone
+[2026-05-11 12:29:25,158: INFO/MainProcess] standard@MacBook-Pro-cua-Luis.local ready.
+[2026-05-11 12:29:26,335: INFO/MainProcess] Task src.worker.run_backtest_job[e181cd87-e829-4c28-8459-47e6dbb03bcb] received
+
+worker: Warm shutdown (MainProcess)
+[2026-05-11 12:29:26,501: INFO/ForkPoolWorker-8] Loading data for ['ETH/USDT', 'BTC/USDT'] from binance via ccxt...
+2026-05-11 12:29:28.625 python3[84022:14608587] +[NSXPCSharedListener endpointForReply:withListenerName:replyErrorCode:]: an error occurred while attempting to obtain endpoint for listener 'ClientCallsAuxiliary': Connection invalid
+[2026-05-11 12:29:28,852: INFO/ForkPoolWorker-8] Task src.worker.run_backtest_job[e181cd87-e829-4c28-8459-47e6dbb03bcb] succeeded in 2.5151549589354545s: {'status': 'success', 'job_id': 'e181cd87-e829-4c28-8459-47e6dbb03bcb', 'message': 'Backtest data loaded successfully', 'rejected_assets': [], 'data_summary': {'ETH/USDT': {'rows_fetched': 30, 'first_date': '2026-04-12T00:00:00', 'last_date': '2026-05-11T00:00:00', 'saved_to': '/private/tmp/vibe-trading/runs/e181cd87-e829-4c28-8459-47e6dbb03bcb/ETH_USDT.csv', 'plot_path': '/private/tmp/vibe-trading/runs/e181cd87-e829-4c28-8459-47e6dbb03bcb/ETH_USDT_price.png'}, 'BTC/USDT': {'rows_fetched': 30, 'first_date': '2026-04-12T00:00:00', 'last_date': '2026-05-11T00:00:00', 'saved_to': '/private/tmp/vibe-trading/runs/e181cd87-e829-4c28-8459-47e6dbb03bcb/BTC_USDT.csv', 'plot_path': '/private/tmp/vibe-trading/runs/e181cd87-e829-4c28-8459-47e6dbb03bcb/BTC_USDT_price.png'}}, 'payload_received': {'simulation_environment': {'exchange': 'binance', 'instrument_type': 'SPOT', 'initial_capital': '10000.0', 'trading_fees': '0.001', 'slippage_tolerance': '0.001', 'historical_range': 30, 'gas_fee_model': 'default', 'track_impermane...', ...}}}
