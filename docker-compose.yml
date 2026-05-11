@@ -24,7 +24,7 @@ services:
 
   rl-worker:
     build: .
-    command: celery -A src.worker worker -Q rl_optimization -c 1 --max-memory-per-child=512000
+    command: celery -A src.worker worker -Q rl_optimization,default,backtest.standard,rl_optimization.standard -c 1 --max-memory-per-child=512000
     env_file:
       - agent/.env
     environment:
