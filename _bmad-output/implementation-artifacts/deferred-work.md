@@ -31,3 +31,9 @@
 - Arbitrary and Silent WFA Truncation at 20 windows [agent/src/rl_optimizer.py] — deferred, pre-existing from story 3-4
 - Hardcoded and Inflexible JWT Algorithm (HS256) [agent/api_server.py] — deferred, pre-existing
 - Fake Integration Tests testing `apply_async` mock instead of real Redis [agent/tests/integration/test_worker_tiered_routing.py] — deferred, pre-existing
+
+## Deferred from: code review of 6-1-generative-strategy-copilot.md (2026-05-11)
+- Queue name injection from JWT `user_tier`. — deferred, pre-existing
+- Timezone Mismatch Risks in RL Optimizer. — deferred, pre-existing
+- Inconsistent WFA Decay Calculation. — deferred, pre-existing
+- Tautological Tests for Tiered Routing. — deferred, pre-existing

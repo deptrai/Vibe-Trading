@@ -176,9 +176,19 @@ def run_backtest_job(self, payload: dict) -> dict:
         os.makedirs(code_dir, exist_ok=True)
         
         # 3. Handle Strategy Code Generation (Story 6.1)
-        strategy_path = os.path.join(code_dir, "signal_engine.py")
+        strategy_path = os.path.join(code_dir, "strategy.py")
         if job_payload.context_rules.executable_code:
-            logger.info("Using provided executable code.")
+            logger.info("Using provided executable code. Scanning for security...")
+            from src.security import scan_code
+            is_safe, errors = scan_code(job_payload.context_rules.executable_code)
+            if not is_safe:
+                logger.error(f"Security scan failed: {errors}")
+                return {
+                    "status": "error",
+                    "job_id": self.request.id,
+                    "message": "Security scan failed for provided executable code.",
+                    "reasons": errors
+                }
             with open(strategy_path, "w") as f:
                 f.write(job_payload.context_rules.executable_code)
         elif job_payload.context_rules.natural_language_rules:
@@ -222,27 +232,9 @@ def run_backtest_job(self, payload: dict) -> dict:
         with open(os.path.join(job_dir, "config.json"), "w") as f:
             json.dump(config_data, f, indent=2)
             
-        # 5. Execute backtest.runner
-        import subprocess
-        logger.info(f"Executing backtest.runner for job {self.request.id}")
-        runner_result = subprocess.run(
-            [sys.executable, "-m", "backtest.runner", str(job_dir)],
-            capture_output=True,
-            text=True,
-            cwd=os.environ.get("PYTHONPATH", os.getcwd())
-        )
-        if runner_result.returncode != 0:
-            logger.error(f"Runner failed: {runner_result.stderr}")
-            return {
-                "status": "error",
-                "job_id": self.request.id,
-                "message": "Engine runner failed execution.",
-                "stderr": runner_result.stderr
-            }
-
-            
         data_summary = {}
         if market_data:
+            # First pass: save all CSVs and basic plots
             for symbol, df in market_data.items():
                 if df is not None and hasattr(df, "empty") and not df.empty and hasattr(df, "index"):
                     safe_symbol = symbol.replace("/", "_").replace("-", "_")
@@ -259,6 +251,7 @@ def run_backtest_job(self, payload: dict) -> dict:
                     
                     # Generate a basic price chart (AC 2)
                     try:
+                        import matplotlib.pyplot as plt
                         plt.figure(figsize=(10, 6))
                         close_col = next((c for c in df.columns if str(c).lower() == "close"), df.columns[0])
                         df[close_col].plot(title=f"Price History for {symbol}")
@@ -272,6 +265,25 @@ def run_backtest_job(self, payload: dict) -> dict:
                     except Exception as plot_e:
                         logger.error(f"Failed to generate plot for {symbol}: {plot_e}")
 
+        # 5. Execute backtest.runner via Runner API
+        from src.core.runner import Runner
+        logger.info(f"Executing backtest Runner for job {self.request.id}")
+        runner = Runner(Path(job_dir))
+        runner_result = runner.execute()
+        if not runner_result.success:
+            logger.error(f"Runner failed: {runner_result.stderr}")
+            return {
+                "status": "error",
+                "job_id": self.request.id,
+                "message": "Engine runner failed execution.",
+                "stderr": runner_result.stderr
+            }
+
+        if market_data:
+            # Second pass: simulators
+            for symbol, df in market_data.items():
+                if df is not None and hasattr(df, "empty") and not df.empty and hasattr(df, "index"):
+                    safe_symbol = symbol.replace("/", "_").replace("-", "_")
                     if getattr(job_payload.execution_flags, "enable_monte_carlo_stress_test", False):
                         try:
                             init_cap_raw = getattr(job_payload.simulation_environment, "initial_capital", 10000.0)
@@ -287,8 +299,12 @@ def run_backtest_job(self, payload: dict) -> dict:
                                     if os.path.exists(equity_path):
                                         eq_df = pd.read_csv(equity_path, index_col=0, parse_dates=True)
                                         simulated_trade_returns = eq_df["equity"].pct_change().fillna(0)
+                                        # Align index exactly with asset_returns to avoid misalignment
+                                        simulated_trade_returns = simulated_trade_returns.reindex(asset_returns.index, fill_value=0.0)
                                     else:
-                                        simulated_trade_returns = pd.Series(0, index=asset_returns.index)
+                                        # If no equity.csv, there's no actual strategy returns
+                                        logger.warning(f"No equity.csv found for {symbol}, skipping simulation enrichment.")
+                                        simulated_trade_returns = pd.Series(0.0, index=asset_returns.index)
                                     
                                     # For positions, we might not have them easily accessible per bar for liquidations
                                     # We'll mock positions based on returns for the sake of the simulator
@@ -313,7 +329,7 @@ def run_backtest_job(self, payload: dict) -> dict:
                                         
                                         last_funding_ts = None
                                         
-                                        for i in range(len(asset_returns)):
+                                        for i in range(len(simulated_trade_returns)):
                                             if is_liquidated_state:
                                                 new_returns[i] = 0.0 # No more returns after liquidation
                                                 continue
@@ -322,7 +338,7 @@ def run_backtest_job(self, payload: dict) -> dict:
                                             if pos == 0:
                                                 continue
                                                 
-                                            ts = asset_returns.index[i]
+                                            ts = simulated_trade_returns.index[i]
                                             is_long = (pos == 1)
                                             
                                             # 1. Apply Funding Fee (Only once per 8h window)
@@ -354,7 +370,7 @@ def run_backtest_job(self, payload: dict) -> dict:
                                                 new_returns[i] = -1.0 # Total loss of margin
                                                 is_liquidated_state = True
 
-                                        simulated_trade_returns = pd.Series(new_returns, index=asset_returns.index)
+                                        simulated_trade_returns = pd.Series(new_returns, index=simulated_trade_returns.index)
                                     # Apply DeFi penalties if in a DEX environment
                                     if defi_simulator is not None:
                                         # Proxy values for dynamic calculation
@@ -401,6 +417,17 @@ def run_backtest_job(self, payload: dict) -> dict:
                 if file.endswith((".csv", ".png", ".json")):
                     engine_artifacts[file] = os.path.join(artifacts_dir, file)
 
+        # 6. Save standard state.json
+        state_data = {
+            "status": "success",
+            "job_id": str(self.request.id),
+            "artifacts": engine_artifacts,
+            "metrics": data_summary
+        }
+        state_path = os.path.join(job_dir, "state.json")
+        with open(state_path, "w") as f:
+            json.dump(state_data, f, indent=2)
+
         # Save a metadata summary file
         meta_path = os.path.join(job_dir, "metadata.json")
         with open(meta_path, "w") as f:
@@ -414,14 +441,15 @@ def run_backtest_job(self, payload: dict) -> dict:
                 "engine_artifacts": engine_artifacts,
             }, f, indent=2)
 
-        return {
-            "status": "success",
-            "job_id": self.request.id,
+        # Return combined dict to maintain backward compatibility while supporting new state structure
+        response_payload = {
+            **state_data,
             "message": "Backtest data loaded successfully",
             "rejected_assets": rejected_assets,
             "data_summary": data_summary,
             "payload_received": payload
         }
+        return response_payload
     except RETRY_EXCEPTIONS as e:
         logger.warning(f"Transient error processing backtest job {self.request.id}: {e}")
         raise

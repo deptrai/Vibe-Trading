@@ -457,6 +457,32 @@ class AgentLoop:
             "react_trace": react_trace,
         }
 
+    def run_headless(self, rules: str, run_dir: Path) -> Dict[str, Any]:
+        """Run the agent headlessly to generate strategy code from natural language rules.
+        """
+        user_message = (
+            f"You are a Quantitative Analyst Agent. "
+            f"Please write a complete strategy.py file based on these natural language rules:\n"
+            f"{rules}\n\n"
+            f"Write the file to {run_dir}/code/strategy.py using your tools."
+        )
+        self.memory.run_dir = str(run_dir)
+        result = self.run(user_message=user_message, session_id="headless_gen")
+        
+        strategy_path = run_dir / "code" / "strategy.py"
+        if not strategy_path.exists():
+            return {
+                "status": "failed",
+                "reason": "Agent finished but strategy.py was not generated.",
+                "run_dir": str(run_dir),
+                "react_trace": result.get("react_trace", [])
+            }
+        return {
+            "status": "success",
+            "run_dir": str(run_dir),
+            "react_trace": result.get("react_trace", [])
+        }
+
     # -- Tool execution with read/write batching --------------------------------
 
     def _process_tool_calls(

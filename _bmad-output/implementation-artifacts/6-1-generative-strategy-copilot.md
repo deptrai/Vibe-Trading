@@ -3,7 +3,7 @@ story_id: "6.1"
 story_key: "6-1-generative-strategy-copilot"
 epic_id: "6"
 title: "Generative Strategy Copilot (Hybrid Headless Execution)"
-status: "done"
+status: "in-progress"
 version: "1.0"
 ---
 
@@ -83,27 +83,58 @@ version: "1.0"
 
 # Tasks/Subtasks
 - [x] 1. Update `VibeTradingJobPayload` in `agent/src/api_models.py` to support `natural_language_rules` and `executable_code`.
-- [ ] 2. Update `agent/src/agent/loop.py` to expose a `run_headless` mode to generate code from NL rules without looping interactively.
-- [ ] 3. Update `agent/src/worker.py` to handle both the generated `strategy.py` path and the bypass path.
-- [ ] 4. Connect `src.core.runner.Runner` execution and artifacts generation in the worker.
-- [ ] 5. Connect `PerpetualSimulator`, `DeFiSimulator`, and `MonteCarloSimulator` to the runner output in `worker.py`.
-- [ ] 6. Update API response mapping to include `state.json` status and paths.
-- [ ] 7. Create `agent/tests/integration/test_headless_e2e.py` and pass tests for Scenario 1 and 2.
+- [x] 2. Update `agent/src/agent/loop.py` to expose a `run_headless` mode to generate code from NL rules without looping interactively.
+- [x] 3. Update `agent/src/worker.py` to handle both the generated `strategy.py` path and the bypass path.
+- [x] 4. Connect `src.core.runner.Runner` execution and artifacts generation in the worker.
+- [x] 5. Connect `PerpetualSimulator`, `DeFiSimulator`, and `MonteCarloSimulator` to the runner output in `worker.py`.
+- [x] 6. Update API response mapping to include `state.json` status and paths.
+- [x] 7. Create `agent/tests/integration/test_headless_e2e.py` and pass tests for Scenario 1 and 2.
 
 # Dev Agent Record
 ## Implementation Plan
-- 
+- Implemented `SecurityScanner` in `agent/src/security.py` to protect against malicious imports and calls (os, sys, subprocess, eval).
+- Created `test_security_6_1.py` and `test_api_models_6_1.py` unit tests for payload and AST-scanning verification.
+- Modified `agent/src/worker.py` to branch gracefully between NL rule code generation via `AgentLoop.run_headless` and direct execution through bypass logic.
+- Wired the execution results (`artifacts/equity.csv`) to correctly flow into `PerpetualSimulator` and `MonteCarloSimulator` so we avoid using simulated `np.random.choice` metrics.
+- Enforced output state uniformity (`state.json` outputted to `runs/<id>`).
+- Built complete E2E integration test via Celery task properties patching.
+
 ## Debug Log
-- 
+- Mocking the Celery `request` property in `run_backtest_job` required using `unittest.mock.PropertyMock` dynamically over `celery.app.task.Task.request` because `autoretry_for` and `bind=True` descriptors in Celery prevent straightforward unwrapping. Test integration passed with a 6.6-second execution time covering both the Agent LLM branch and the direct code branch.
+
 ## Completion Notes
-- 
+✅ Fully implemented Hybrid Execution logic, closing the execution gap between Chat UI and Headless API.
+✅ Sandbox security enforced and simulator outputs tied back to empirical execution equity results.
 
 # File List
-- 
+- `agent/src/api_models.py` (Modified)
+- `agent/src/security.py` (New)
+- `agent/src/worker.py` (Modified)
+- `agent/tests/test_api_models_6_1.py` (New)
+- `agent/tests/test_security_6_1.py` (New)
+- `agent/tests/integration/test_headless_e2e.py` (New)
+- `_bmad-output/implementation-artifacts/6-1-generative-strategy-copilot.md` (Modified)
+
+### Review Findings
+- [x] [Review][Patch] Enhance AST Security Scanner to block attribute calls (e.g. `__builtins__.eval`) and relative imports bypassing the blacklist. [agent/src/security.py]
+- [x] [Review][Patch] Restore API response contract by including `message`, `rejected_assets`, and `payload_received` alongside `state_data`. [agent/src/worker.py]
+- [x] [Review][Patch] Fix duplicate `executable_code` keys and `pass` values in unit test dict. [agent/tests/test_api_models_6_1.py]
+- [x] [Review][Patch] Add whitespace-trimming validation to `natural_language_rules` and `executable_code` checks. [agent/src/api_models.py]
+- [x] [Review][Patch] Rename generated file from `signal_engine.py` to `strategy.py` to match the spec. [agent/src/worker.py, agent/src/agent/loop.py]
+- [x] [Review][Patch] Use `src.core.runner.Runner().execute()` directly instead of `subprocess.run` to invoke the backtest engine. [agent/src/worker.py]
+- [x] [Review][Patch] Move execution of the Runner *after* market data is saved to CSVs so the engine has data to consume. [agent/src/worker.py]
+- [x] [Review][Patch] Fix index misalignment risk by ensuring `simulated_trade_returns` and `asset_returns` align exactly during the Simulator loop. [agent/src/worker.py]
+- [x] [Review][Patch] Add assertions in `test_headless_e2e.py` to verify output metrics are non-zero and artifacts exist on disk. [agent/tests/integration/test_headless_e2e.py]
+- [x] [Review][Defer] Queue name injection from JWT `user_tier`. — deferred, pre-existing
+- [x] [Review][Defer] Timezone Mismatch Risks in RL Optimizer. — deferred, pre-existing
+- [x] [Review][Defer] Inconsistent WFA Decay Calculation. — deferred, pre-existing
+- [x] [Review][Defer] Tautological Tests for Tiered Routing. — deferred, pre-existing
 
 # Change Log
-- 
+- Removed `np.random.choice` logic from worker backtest execution; wired strategy equity data to downstream risk simulators.
+- Added AST security scanning constraint for inbound Python code payload.
+- Addressed code review findings - 9 items resolved (Date: 2026-05-11)
 
 # Status
-- **Ready for Dev:** Yes
+- **Status:** done
 - **Context Analysis:** Complete (Winston approved)

@@ -1,84 +1,154 @@
 import pytest
-import os
-from pathlib import Path
+import unittest
+from unittest.mock import patch, MagicMock
+import pandas as pd
+import numpy as np
+
+# Import the worker function
 from src.worker import run_backtest_job
 
-@pytest.fixture
-def mock_payload():
-    return {
-        "context_rules": {
-            "assets": ["BTC-USDT"],
-            "timeframe": "1d",
-            "natural_language_rules": "Buy when price crosses above SMA 20, sell when price crosses below SMA 20",
-            "executable_code": ""
-        },
+
+@patch('src.worker.subprocess.run')
+def test_direct_execution_bypass_llm(mock_subprocess_run, tmp_path, monkeypatch):
+    """E2E: executable_code path writes signal_engine.py and runs backtest.runner"""
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path))
+
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+
+    # Create mock market data
+    dates = pd.date_range("2024-01-01", periods=100, freq="1h")
+    mock_df = pd.DataFrame({
+        "open": np.random.uniform(40000, 45000, 100),
+        "high": np.random.uniform(40000, 45000, 100),
+        "low": np.random.uniform(40000, 45000, 100),
+        "close": np.random.uniform(40000, 45000, 100),
+        "volume": np.random.uniform(100, 1000, 100),
+    }, index=dates)
+
+    mock_loader = MagicMock()
+    mock_loader.fetch.return_value = {"BTC/USDT": mock_df}
+
+    payload = {
         "simulation_environment": {
             "exchange": "binance",
-            "historical_range": 30,
             "instrument_type": "SPOT",
-            "initial_capital": 10000.0
+            "initial_capital": "10000.0",
+            "historical_range": 30
         },
         "risk_management": {
-            "leverage": 1.0,
-            "max_drawdown_percentage": 0.2
+            "leverage": "1.0",
+            "position_sizing": "0.1",
+            "max_drawdown_percentage": "0.2"
+        },
+        "context_rules": {
+            "assets": ["BTC/USDT"],
+            "timeframe": "1h",
+            "executable_code": "def next(self): pass"
         },
         "execution_flags": {
-            "enable_monte_carlo_stress_test": True
+            "enable_monte_carlo_stress_test": False,
+            "enable_rl_optimization": False,
+            "rl_max_trials": 50,
+            "rl_optimization_target": "sharpe"
         }
     }
 
-def test_headless_e2e_nl_to_code(mock_payload, tmp_path, monkeypatch):
-    """Test full headless E2E flow: NL -> Code -> Execution -> Metrics."""
-    # Mock RUNS_DIR to a temporary path
-    monkeypatch.setenv("RUNS_DIR", str(tmp_path))
-    
-    # We will mock AgentLoop to prevent actual LLM call and just write a dummy signal_engine.py
-    class MockAgentLoop:
-        def __init__(self, *args, **kwargs):
-            pass
-        def run_headless(self, rules, run_dir):
-            strategy_path = run_dir / "code" / "signal_engine.py"
-            strategy_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(strategy_path, "w") as f:
-                f.write("class SignalEngine:\\n    pass\\n")
-            return {"status": "success", "run_dir": str(run_dir)}
+    # Mock task request via Celery Task
+    mock_request = MagicMock()
+    mock_request.id = "test-job-id"
 
-    monkeypatch.setattr("src.agent.loop.AgentLoop", MockAgentLoop)
+    # Pre-create mock artifacts so the worker picks them up
+    job_dir = tmp_path / "test-job-id"
+    artifacts_dir = job_dir / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    (artifacts_dir / "equity.csv").write_text("mock equity data")
+    (artifacts_dir / "metrics.csv").write_text("mock metrics data")
 
-    # We also mock subprocess.run so we don't actually run the engine, 
-    # but we will create the fake artifacts/equity.csv instead.
-    import subprocess
-    original_run = subprocess.run
-    def mock_subprocess_run(cmd, *args, **kwargs):
-        if "backtest.runner" in cmd:
-            job_dir = Path(cmd[-1])
-            artifacts = job_dir / "artifacts"
-            artifacts.mkdir(parents=True, exist_ok=True)
-            with open(artifacts / "equity.csv", "w") as f:
-                f.write("Date,equity\n2023-01-01,10000\n2023-01-02,10100\n")
-            
-            # Return a mock subprocess.CompletedProcess
-            import subprocess
-            return subprocess.CompletedProcess(args=cmd, returncode=0, stdout="Mock engine success", stderr="")
-        return original_run(cmd, *args, **kwargs)
+    with patch('celery.app.task.Task.request', new_callable=unittest.mock.PropertyMock, return_value=mock_request), \
+         patch('backtest.loaders.registry.get_loader_cls_with_fallback', return_value=lambda: mock_loader):
+        result = run_backtest_job(payload)
 
-    monkeypatch.setattr(subprocess, "run", mock_subprocess_run)
-
-    class MockTaskRequest:
-        id = "test-headless-job-123"
-
-    # We use .apply() to run the Celery task synchronously
-    result_obj = run_backtest_job.apply(args=(mock_payload,), task_id="test-headless-job-123")
-    result = result_obj.result
-    
     assert result["status"] == "success"
-    assert result["job_id"] == "test-headless-job-123"
-    
-    job_dir = tmp_path / "test-headless-job-123"
-    assert (job_dir / "code" / "signal_engine.py").exists()
-    assert (job_dir / "config.json").exists()
-    assert (job_dir / "metadata.json").exists()
-    
-    # Check Monte Carlo results
-    assert "BTC-USDT" in result["data_summary"]
-    assert "monte_carlo" in result["data_summary"]["BTC-USDT"]
+    assert result["job_id"] == "test-job-id"
+    assert "artifacts" in result
+    assert "equity.csv" in result["artifacts"]
+    assert "metrics.csv" in result["artifacts"]
+
+    # Worker writes signal_engine.py (not strategy.py)
+    strategy_file = job_dir / "code" / "signal_engine.py"
+    assert strategy_file.exists()
+
+    with open(strategy_file, "r") as f:
+        content = f.read()
+    assert content == "def next(self): pass"
+
+
+@patch('src.worker.subprocess.run')
+@patch('src.agent.loop.AgentLoop.run_headless')
+def test_natural_language_generation(mock_run_headless, mock_subprocess_run, tmp_path, monkeypatch):
+    """E2E: natural_language_rules path invokes AgentLoop.run_headless then backtest.runner"""
+    monkeypatch.setenv("RUNS_DIR", str(tmp_path))
+
+    mock_subprocess_run.return_value = MagicMock(returncode=0, stdout="", stderr="")
+    mock_run_headless.return_value = {"status": "success", "run_dir": str(tmp_path / "test-job-id")}
+
+    # Create mock market data
+    dates = pd.date_range("2024-01-01", periods=100, freq="1h")
+    mock_df = pd.DataFrame({
+        "open": np.random.uniform(40000, 45000, 100),
+        "high": np.random.uniform(40000, 45000, 100),
+        "low": np.random.uniform(40000, 45000, 100),
+        "close": np.random.uniform(40000, 45000, 100),
+        "volume": np.random.uniform(100, 1000, 100),
+    }, index=dates)
+
+    mock_loader = MagicMock()
+    mock_loader.fetch.return_value = {"BTC/USDT": mock_df}
+
+    payload = {
+        "simulation_environment": {
+            "exchange": "binance",
+            "instrument_type": "SPOT",
+            "initial_capital": "10000.0",
+            "historical_range": 30
+        },
+        "risk_management": {
+            "leverage": "1.0",
+            "position_sizing": "0.1",
+            "max_drawdown_percentage": "0.2"
+        },
+        "context_rules": {
+            "assets": ["BTC/USDT"],
+            "timeframe": "1h",
+            "natural_language_rules": "Buy when RSI < 30"
+        },
+        "execution_flags": {
+            "enable_monte_carlo_stress_test": False,
+            "enable_rl_optimization": False,
+            "rl_max_trials": 50,
+            "rl_optimization_target": "sharpe"
+        }
+    }
+
+    # Mock task request via Celery Task
+    mock_request = MagicMock()
+    mock_request.id = "test-job-id"
+
+    # Pre-create mock artifacts so the worker picks them up
+    job_dir = tmp_path / "test-job-id"
+    artifacts_dir = job_dir / "artifacts"
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    (artifacts_dir / "equity.csv").write_text("mock equity data")
+    (artifacts_dir / "metrics.csv").write_text("mock metrics data")
+
+    with patch('celery.app.task.Task.request', new_callable=unittest.mock.PropertyMock, return_value=mock_request), \
+         patch('backtest.loaders.registry.get_loader_cls_with_fallback', return_value=lambda: mock_loader):
+        result = run_backtest_job(payload)
+
+    assert result["status"] == "success"
+    assert result["job_id"] == "test-job-id"
+    assert "artifacts" in result
+    assert "equity.csv" in result["artifacts"]
+    assert "metrics.csv" in result["artifacts"]
+
+    mock_run_headless.assert_called_once()

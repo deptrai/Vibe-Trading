@@ -135,6 +135,12 @@ class VibeTradingJobPayload(_StrictModel):
         if self.simulation_environment.instrument_type == InstrumentType.SPOT:
             if self.risk_management.leverage > Decimal("1.0"):
                 raise ValueError("Leverage greater than 1.0 is not supported for SPOT instruments.")
+        
+        nl_rules = self.context_rules.natural_language_rules
+        code = self.context_rules.executable_code
+        if not (nl_rules and nl_rules.strip()) and not (code and code.strip()):
+            raise ValueError("Either natural_language_rules or executable_code must be provided.")
+            
         return self
 
 
