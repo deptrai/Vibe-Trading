@@ -3,7 +3,7 @@ story_id: "6.1"
 story_key: "6-1-generative-strategy-copilot"
 epic_id: "6"
 title: "Generative Strategy Copilot (Hybrid Headless Execution)"
-status: "ready-for-dev"
+status: "done"
 version: "1.0"
 ---
 
@@ -80,6 +80,29 @@ version: "1.0"
 - **Technology:** Python 3.11, FastAPI, Celery, CCXT.
 - **Precision:** Use `Decimal` for all financial logic (Simulators).
 - **Security:** Ensure sandboxed execution for `executable_code` (no `os.system`, etc.).
+
+# Tasks/Subtasks
+- [x] 1. Update `VibeTradingJobPayload` in `agent/src/api_models.py` to support `natural_language_rules` and `executable_code`.
+- [ ] 2. Update `agent/src/agent/loop.py` to expose a `run_headless` mode to generate code from NL rules without looping interactively.
+- [ ] 3. Update `agent/src/worker.py` to handle both the generated `strategy.py` path and the bypass path.
+- [ ] 4. Connect `src.core.runner.Runner` execution and artifacts generation in the worker.
+- [ ] 5. Connect `PerpetualSimulator`, `DeFiSimulator`, and `MonteCarloSimulator` to the runner output in `worker.py`.
+- [ ] 6. Update API response mapping to include `state.json` status and paths.
+- [ ] 7. Create `agent/tests/integration/test_headless_e2e.py` and pass tests for Scenario 1 and 2.
+
+# Dev Agent Record
+## Implementation Plan
+- 
+## Debug Log
+- 
+## Completion Notes
+- 
+
+# File List
+- 
+
+# Change Log
+- 
 
 # Status
 - **Ready for Dev:** Yes
