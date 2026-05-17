@@ -1,6 +1,6 @@
 [project]
 name = "vibe-trading-ai"
-version = "0.1.6"
+version = "0.1.8"
 description = "Natural-language finance research AI agent with backtesting"
 requires-python = ">=3.11"
 license = "MIT"
@@ -61,7 +61,8 @@ dependencies = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/HKUDS/Vibe-Trading"
+Homepage = "https://vibetrading.wiki/"
+Documentation = "https://vibetrading.wiki/docs/"
 Repository = "https://github.com/HKUDS/Vibe-Trading"
 Issues = "https://github.com/HKUDS/Vibe-Trading/issues"
 
@@ -89,11 +90,13 @@ include = ["src*", "backtest*"]
     "shadow_account/templates/*.css",
 ]
 "backtest" = ["*.py"]
+"src.factors" = ["zoo/**/*.yaml", "zoo/**/*.md", "zoo/**/NOTICE"]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
+    "pytest-socket>=0.7.0",
 ]
 
 [tool.pytest.ini_options]

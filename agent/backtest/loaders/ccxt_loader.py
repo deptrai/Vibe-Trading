@@ -9,11 +9,16 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from typing import Dict, List, Optional
 
 import pandas as pd
 
-from backtest.loaders.base import validate_date_range
+from backtest.loaders.base import (
+    check_budget,
+    retry_with_budget,
+    validate_date_range,
+)
 from backtest.loaders.registry import register
 
 logger = logging.getLogger(__name__)
@@ -22,6 +27,14 @@ _INTERVAL_MAP = {
     "1m": "1m", "5m": "5m", "15m": "15m", "30m": "30m",
     "1H": "1h", "4H": "4h", "1D": "1d",
 }
+
+# P12-b: ccxt had no request timeout and an unbounded paginated fetch with
+# no retry budget, so a transient disconnect hung get_market_data for 10+
+# minutes. Cap each HTTP call, bound transient retries, and enforce a hard
+# wall-clock budget so the fetch fails fast instead of hanging. Retry
+# scheduling is delegated to :mod:`backtest.loaders.base`.
+_CCXT_TIMEOUT_MS = int(os.getenv("CCXT_TIMEOUT_MS", "15000"))
+_CCXT_FETCH_BUDGET_S = float(os.getenv("CCXT_FETCH_BUDGET_S", "60"))
 
 
 @register
@@ -51,7 +64,7 @@ class DataLoader:
         if exchange_cls is None:
             logger.warning("Unknown CCXT exchange %s, falling back to binance", exchange_id)
             exchange_cls = ccxt.binance
-        return exchange_cls({"enableRateLimit": True})
+        return exchange_cls({"enableRateLimit": True, "timeout": _CCXT_TIMEOUT_MS})
 
     def fetch(
         self,
@@ -97,12 +110,25 @@ class DataLoader:
         exchange, symbol: str, timeframe: str, since_ms: int, end_ms: int,
     ) -> Optional[pd.DataFrame]:
         """Paginated OHLCV fetch for one symbol."""
+        import ccxt
+
         all_rows: list = []
         cursor = since_ms
         limit = 1000
+        deadline = time.monotonic() + _CCXT_FETCH_BUDGET_S
+        label = f"ccxt fetch for {symbol}"
 
         for _ in range(200):
-            ohlcv = exchange.fetch_ohlcv(symbol, timeframe, since=cursor, limit=limit)
+            check_budget(deadline, label, budget_s=_CCXT_FETCH_BUDGET_S)
+            # ``ccxt.NetworkError`` covers RequestTimeout / DDoSProtection /
+            # ExchangeNotAvailable — the transient family. Anything else
+            # (e.g. ``ExchangeError`` for a bad symbol) is not retried.
+            ohlcv = retry_with_budget(
+                lambda: exchange.fetch_ohlcv(symbol, timeframe, since=cursor, limit=limit),
+                transient=ccxt.NetworkError,
+                deadline=deadline,
+                label=label,
+            )
             if not ohlcv:
                 break
             all_rows.extend(ohlcv)

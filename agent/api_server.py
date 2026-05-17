@@ -117,6 +117,7 @@ class RunResponse(BaseModel):
 
     metrics: Optional[BacktestMetrics] = Field(None, description="Backtest metrics")
     artifacts: List[Artifact] = Field(default_factory=list, description="Run artifacts")
+    run_card: Optional[Dict[str, Any]] = Field(None, description="Trust Layer run card payload")
 
     equity_curve: Optional[List[Dict[str, Any]]] = Field(None, description="Equity preview")
     trade_log: Optional[List[Dict[str, Any]]] = Field(None, description="Trade preview")
@@ -256,12 +257,43 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# CORS: override with CORS_ORIGINS (comma-separated)
-_CORS_ORIGINS = os.getenv(
-    "CORS_ORIGINS",
-    "http://localhost:3000,http://localhost:5173,http://localhost:8000,"
-    "http://127.0.0.1:3000,http://127.0.0.1:5173,http://127.0.0.1:8000",
-).split(",")
+_DEFAULT_CORS_ORIGINS = [
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:8000",
+    "http://127.0.0.1:3000",
+    "http://127.0.0.1:5173",
+    "http://127.0.0.1:8000",
+]
+
+
+def _parse_cors_origins(raw: Optional[str]) -> List[str]:
+    """Parse CORS origins and reject credentialed wildcard configuration.
+
+    Args:
+        raw: Comma-separated CORS origins from ``CORS_ORIGINS``. ``None`` or a
+            blank value uses the loopback development defaults.
+
+    Returns:
+        Explicit CORS origins accepted by the API server.
+
+    Raises:
+        RuntimeError: If a wildcard origin is configured while credentials are
+            enabled.
+    """
+    if raw is None or not raw.strip():
+        return list(_DEFAULT_CORS_ORIGINS)
+    origins = [origin.strip() for origin in raw.split(",") if origin.strip()]
+    if "*" in origins:
+        raise RuntimeError(
+            "CORS_ORIGINS='*' is not allowed while credentials are enabled; "
+            "configure explicit Web UI origins instead."
+        )
+    return origins
+
+
+# CORS: override with CORS_ORIGINS (comma-separated explicit origins)
+_CORS_ORIGINS = _parse_cors_origins(os.getenv("CORS_ORIGINS"))
 
 app.add_middleware(
     CORSMiddleware,
@@ -644,16 +676,6 @@ def _write_env_values(path: Path, updates: Dict[str, str]) -> None:
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def _mask_secret(value: str) -> Optional[str]:
-    """Return a non-sensitive hint for a configured secret."""
-    value = value.strip()
-    if not value:
-        return None
-    if len(value) <= 8:
-        return "****"
-    return f"{value[:4]}...{value[-4:]}"
-
-
 def _is_configured_secret(value: str, placeholders: set[str]) -> bool:
     """Return True when a secret is set and not a documented placeholder."""
     normalized = value.strip().strip('"').strip("'")
@@ -683,7 +705,7 @@ def _build_llm_settings_response(values: Optional[Dict[str, str]] = None) -> LLM
     provider = LLM_PROVIDER_BY_NAME.get(provider_name, LLM_PROVIDER_BY_NAME["openai"])
     api_key = env_values.get(provider.api_key_env or "", "") if provider.api_key_env else ""
     api_key_configured = _is_configured_secret(api_key, LLM_API_KEY_PLACEHOLDERS)
-    api_key_hint = _mask_secret(api_key) if api_key_configured else None
+    api_key_hint = None
     if provider.auth_type == "oauth":
         try:
             from src.providers.openai_codex import get_openai_codex_login_status
@@ -692,7 +714,7 @@ def _build_llm_settings_response(values: Optional[Dict[str, str]] = None) -> LLM
         except Exception:
             token = None
         api_key_configured = bool(token)
-        api_key_hint = getattr(token, "account_id", None) if token else None
+        api_key_hint = None
     return LLMSettingsResponse(
         provider=provider.name,
         model_name=env_values.get("LANGCHAIN_MODEL_NAME", provider.default_model),
@@ -738,7 +760,7 @@ def _build_data_source_settings_response(values: Optional[Dict[str, str]] = None
         baostock_message = "No BaoStock loader is registered in this project."
     return DataSourceSettingsResponse(
         tushare_token_configured=token_configured,
-        tushare_token_hint=_mask_secret(token) if token_configured else None,
+        tushare_token_hint=None,
         baostock_supported=supported,
         baostock_installed=installed,
         baostock_message=baostock_message,
@@ -882,6 +904,13 @@ def _build_response_from_run_dir(run_dir: Path, elapsed: float, *, include_analy
     if metrics_csv_path.exists():
         response.artifacts_metrics_csv = _load_csv_to_dict(metrics_csv_path)
 
+    run_card_path = run_dir / "run_card.json"
+    if run_card_path.exists():
+        try:
+            response.run_card = json.loads(run_card_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, OSError):
+            pass
+
     trades_path = run_dir / "artifacts" / "trades.csv"
     if trades_path.exists():
         response.artifacts_trades_csv = _load_csv_to_dict(trades_path)
@@ -922,6 +951,31 @@ def _build_response_from_run_dir(run_dir: Path, elapsed: float, *, include_analy
 
 
 # ============================================================================
+# Path-parameter validation
+# ============================================================================
+
+# ``run_id`` and ``session_id`` flow directly into filesystem paths
+# (``RUNS_DIR / run_id`` etc.). Restrict to a safe character class so that
+# values like ``..`` or ``foo/../bar`` cannot escape the parent directory.
+_SAFE_PATH_PARAM_RE = __import__("re").compile(r"^[A-Za-z0-9_-]{1,128}$")
+
+
+def _validate_path_param(value: str, kind: str) -> None:
+    """Reject path parameters that could escape the parent directory.
+
+    Args:
+        value: User-supplied path-parameter value.
+        kind: Parameter name, used in the error detail.
+
+    Raises:
+        HTTPException: 400 when ``value`` does not match the safe character
+            class, mirroring the existing ``_SHADOW_ID_RE`` check.
+    """
+    if not _SAFE_PATH_PARAM_RE.fullmatch(value or ""):
+        raise HTTPException(status_code=400, detail=f"invalid {kind}")
+
+
+# ============================================================================
 # API Endpoints
 # ============================================================================
 
@@ -935,6 +989,7 @@ async def get_run_code(run_id: str):
     Returns:
         Map filename -> source text.
     """
+    _validate_path_param(run_id, "run_id")
     run_dir = RUNS_DIR / run_id / "code"
     if not run_dir.exists():
         raise HTTPException(status_code=404, detail=f"Code directory for run {run_id} not found")
@@ -956,6 +1011,7 @@ async def get_run_pine(run_id: str):
     Returns:
         Object with pine script content and exists flag.
     """
+    _validate_path_param(run_id, "run_id")
     pine_path = RUNS_DIR / run_id / "artifacts" / "strategy.pine"
     if not pine_path.exists():
         return {"exists": False, "content": None}
@@ -968,6 +1024,7 @@ async def get_run_pine(run_id: str):
 @app.get("/runs/{run_id}", response_model=RunResponse, dependencies=[Depends(require_auth)])
 async def get_run_result(run_id: str):
     """Fetch full details for a historical run by ``run_id``."""
+    _validate_path_param(run_id, "run_id")
     run_dir = RUNS_DIR / run_id
 
     if not run_dir.exists():
@@ -1036,14 +1093,14 @@ async def list_runs(limit: int = 20):
             try:
                 req_data = json.loads(req_file.read_text(encoding="utf-8"))
                 prompt = req_data.get("prompt")
-            except:
+            except (json.JSONDecodeError, OSError):
                 pass
-        
+
         if not prompt and planner_file.exists():
             try:
                 planner_data = json.loads(planner_file.read_text(encoding="utf-8"))
                 prompt = planner_data.get("user_goal") or planner_data.get("goal")
-            except:
+            except (json.JSONDecodeError, OSError):
                 pass
             
         if not prompt:
@@ -1063,7 +1120,7 @@ async def list_runs(limit: int = 20):
                         total_return = float(row.get('total_return', 0) or 0)
                         sharpe = float(row.get('sharpe', 0) or 0)
                         break
-            except:
+            except (OSError, ValueError):
                 pass
         
         run_context = load_run_context(d)
@@ -1493,6 +1550,7 @@ async def list_sessions(limit: int = Query(50, ge=1, le=200)):
 @app.get("/sessions/{session_id}", response_model=SessionResponse, dependencies=[Depends(require_auth)])
 async def get_session(session_id: str):
     """Get one session by id."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1512,6 +1570,7 @@ async def get_session(session_id: str):
 @app.delete("/sessions/{session_id}", dependencies=[Depends(require_auth)])
 async def delete_session(session_id: str):
     """Delete a session."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1529,6 +1588,7 @@ class UpdateSessionRequest(BaseModel):
 @app.patch("/sessions/{session_id}", dependencies=[Depends(require_auth)])
 async def update_session(session_id: str, req: UpdateSessionRequest):
     """Update session fields (e.g. title)."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1546,6 +1606,7 @@ async def update_session(session_id: str, req: UpdateSessionRequest):
 @app.post("/sessions/{session_id}/messages", dependencies=[Depends(require_auth)])
 async def send_message(session_id: str, payload: SendMessageRequest, http_request: Request):
     """Send a user message and start the agent loop (natural language strategy)."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1563,6 +1624,7 @@ async def send_message(session_id: str, payload: SendMessageRequest, http_reques
 @app.post("/sessions/{session_id}/cancel", dependencies=[Depends(require_auth)])
 async def cancel_session(session_id: str):
     """Cancel the in-flight agent loop for this session."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1575,6 +1637,7 @@ async def cancel_session(session_id: str):
 @app.get("/sessions/{session_id}/messages", response_model=List[MessageResponse], dependencies=[Depends(require_auth)])
 async def get_messages(session_id: str, limit: int = Query(100, ge=1, le=1000)):
     """List messages for a session."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1600,6 +1663,7 @@ async def session_events(
     last_event_id: Optional[str] = Query(None, alias="Last-Event-ID"),
 ):
     """SSE stream for agent events."""
+    _validate_path_param(session_id, "session_id")
     svc = _get_session_service()
     if not svc:
         raise HTTPException(status_code=501, detail="Session runtime not enabled")
@@ -1840,6 +1904,7 @@ async def get_swarm_run(run_id: str):
     """Swarm run detail including task statuses."""
     from src.swarm.task_store import TaskStore
 
+    _validate_path_param(run_id, "run_id")
     runtime = _get_swarm_runtime()
     run = runtime._store.load_run(run_id)
     if not run:
@@ -1871,6 +1936,8 @@ async def get_swarm_run(run_id: str):
 async def swarm_run_events(run_id: str, request: Request, last_index: int = Query(0, ge=0)):
     """SSE stream for a swarm run."""
     import asyncio
+
+    _validate_path_param(run_id, "run_id")
     runtime = _get_swarm_runtime()
 
     async def event_stream():
@@ -1894,11 +1961,20 @@ async def swarm_run_events(run_id: str, request: Request, last_index: int = Quer
 @app.post("/swarm/runs/{run_id}/cancel", dependencies=[Depends(require_auth)])
 async def cancel_swarm_run(run_id: str):
     """Cancel an active swarm run."""
+    _validate_path_param(run_id, "run_id")
     runtime = _get_swarm_runtime()
     ok = runtime.cancel_run(run_id)
     if not ok:
         raise HTTPException(status_code=404, detail=f"No active run {run_id}")
     return {"status": "cancelled"}
+
+
+# ============================================================================
+# Alpha Zoo routes (Web UI) — defined in src/api/alpha_routes.py
+# ============================================================================
+
+from src.api.alpha_routes import register_alpha_routes  # noqa: E402
+register_alpha_routes(app)
 
 
 # ============================================================================

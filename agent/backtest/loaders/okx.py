@@ -5,16 +5,28 @@ Supports 1m/5m/15m/30m/1H/4H/1D.
 Up to 300 bars per request; paginates with ``after`` for longer history.
 """
 
+import os
+import time
 from typing import Dict, List, Optional
 
 import pandas as pd
 import requests
 
-from backtest.loaders.base import validate_date_range
+from backtest.loaders.base import (
+    check_budget,
+    retry_with_budget,
+    validate_date_range,
+)
 from backtest.loaders.registry import register
 
 BASE_URL = "https://www.okx.com/api/v5"
 _MAX_PER_PAGE = 300
+# P12-b parity: OKX already sets a per-request timeout but had no retry
+# budget, so a transient blip dropped the whole symbol and a slow tier
+# could stall ~max_pages*timeout. Bound it like the ccxt loader; retry
+# scheduling is delegated to :mod:`backtest.loaders.base`.
+_OKX_TIMEOUT = int(os.getenv("OKX_TIMEOUT_S", "15"))
+_OKX_FETCH_BUDGET_S = float(os.getenv("OKX_FETCH_BUDGET_S", "60"))
 
 
 @register
@@ -98,16 +110,32 @@ class DataLoader:
         """
         all_rows: list = []
         after = str(end_ts)
+        deadline = time.monotonic() + _OKX_FETCH_BUDGET_S
+        label = f"OKX fetch for {inst_id}"
 
         for _ in range(max_pages):
+            check_budget(deadline, label, budget_s=_OKX_FETCH_BUDGET_S)
             params = {
                 "instId": inst_id,
                 "bar": bar,
                 "limit": str(_MAX_PER_PAGE),
                 "after": after,
             }
-            resp = requests.get(f"{BASE_URL}/market/candles", params=params, timeout=15)
-            data = resp.json()
+
+            def _do_request() -> dict:
+                resp = requests.get(
+                    f"{BASE_URL}/market/candles",
+                    params=params,
+                    timeout=_OKX_TIMEOUT,
+                )
+                return resp.json()
+
+            data = retry_with_budget(
+                _do_request,
+                transient=requests.RequestException,
+                deadline=deadline,
+                label=label,
+            )
             if data.get("code") != "0" or not data.get("data"):
                 break
 

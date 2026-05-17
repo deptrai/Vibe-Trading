@@ -8,6 +8,7 @@ with cancellation and event callback support.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 from concurrent.futures import (
     Future,
@@ -19,7 +20,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from src.swarm.mailbox import Mailbox
+from src.swarm import grounding
 from src.swarm.models import (
     RunStatus,
     SwarmAgentSpec,
@@ -37,6 +38,7 @@ from src.swarm.task_store import (
     topological_layers,
     validate_dag,
 )
+from src.tools.redaction import redact_internal_paths
 from src.swarm.worker import run_worker
 
 logger = logging.getLogger(__name__)
@@ -91,6 +93,16 @@ class SwarmRuntime:
         """
         run = build_run_from_preset(preset_name, user_vars)
         validate_dag(run.tasks)
+
+        # Capture which provider/model the run was launched against so the
+        # serialized run.json carries enough context for cost audits and
+        # post-hoc debugging. Read directly from the same env vars the
+        # provider layer uses (src/providers/llm.py:136,195) — that way an
+        # override applied via os.environ still shows up. Per-agent overrides
+        # remain visible on SwarmAgentSpec.model_name.
+        run.provider = (os.getenv("LANGCHAIN_PROVIDER") or "").strip().lower() or None
+        run.model = (os.getenv("LANGCHAIN_MODEL_NAME") or "").strip() or None
+
         self._store.create_run(run)
 
         cancel_event = threading.Event()
@@ -201,6 +213,8 @@ class SwarmRuntime:
         self._store.update_run(run)
         self._emit_event(run_id, self._make_event("run_started"))
 
+        self._prefetch_grounding_data(run)
+
         # Initialize task store
         task_store = TaskStore(run_dir)
         for task in run.tasks:
@@ -208,6 +222,11 @@ class SwarmRuntime:
 
         # Build agent lookup
         agent_map: dict[str, SwarmAgentSpec] = {a.id: a for a in run.agents}
+
+        # Render the grounding block once and pass it to every worker on
+        # this run. The block is empty when no symbols were detected, in
+        # which case workers see no extra section.
+        grounding_block = grounding.format_grounding_block(run.grounding_data or {})
 
         # Compute execution layers
         layers = topological_layers(run.tasks)
@@ -241,6 +260,7 @@ class SwarmRuntime:
                     run_dir=run_dir,
                     cancel_event=cancel_event,
                     include_shell_tools=include_shell_tools,
+                    grounding_block=grounding_block,
                 )
 
                 # Process results
@@ -249,11 +269,12 @@ class SwarmRuntime:
                     run.total_input_tokens += result.input_tokens
                     run.total_output_tokens += result.output_tokens
 
-                    if result.status in ("completed", "timeout", "token_limit"):
+                    if result.status == "completed":
                         task_summaries[tid] = result.summary
                         now_iso = datetime.now(timezone.utc).isoformat()
                         task_store.update_status(
-                            tid, TaskStatus.completed,
+                            tid,
+                            TaskStatus.completed,
                             summary=result.summary,
                             completed_at=now_iso,
                             artifacts=result.artifact_paths,
@@ -262,26 +283,38 @@ class SwarmRuntime:
                         resolve_dependencies(run_dir / "tasks", tid)
                         self._emit_event(
                             run_id,
-                            self._make_event("task_completed", task_id=tid,
-                                             data={"status": result.status,
-                                                   "iterations": result.iterations,
-                                                   "input_tokens": result.input_tokens,
-                                                   "output_tokens": result.output_tokens}),
+                            self._make_event(
+                                "task_completed",
+                                task_id=tid,
+                                data={
+                                    "status": result.status,
+                                    "iterations": result.iterations,
+                                    "input_tokens": result.input_tokens,
+                                    "output_tokens": result.output_tokens,
+                                },
+                            ),
                         )
                     else:
                         all_succeeded = False
                         task_store.update_status(
-                            tid, TaskStatus.failed,
-                            error=result.error or "Unknown error",
+                            tid,
+                            TaskStatus.failed,
+                            error=redact_internal_paths(result.error)
+                            or f"worker did not complete (status={result.status})",
                             completed_at=datetime.now(timezone.utc).isoformat(),
                             worker_iterations=result.iterations,
                         )
                         self._emit_event(
                             run_id,
-                            self._make_event("task_failed", task_id=tid,
-                                             data={"error": result.error,
-                                                   "input_tokens": result.input_tokens,
-                                                   "output_tokens": result.output_tokens}),
+                            self._make_event(
+                                "task_failed",
+                                task_id=tid,
+                                data={
+                                    "error": redact_internal_paths(result.error),
+                                    "input_tokens": result.input_tokens,
+                                    "output_tokens": result.output_tokens,
+                                },
+                            ),
                         )
 
         except Exception as exc:
@@ -289,14 +322,12 @@ class SwarmRuntime:
             all_succeeded = False
             self._emit_event(
                 run_id,
-                self._make_event("run_error", data={"error": str(exc)}),
+                self._make_event("run_error", data={"error": redact_internal_paths(str(exc))}),
             )
 
         # Finalize run
         final_status = (
-            RunStatus.cancelled if cancel_event.is_set()
-            else RunStatus.completed if all_succeeded
-            else RunStatus.failed
+            RunStatus.cancelled if cancel_event.is_set() else RunStatus.completed if all_succeeded else RunStatus.failed
         )
         run.status = final_status
         run.completed_at = datetime.now(timezone.utc).isoformat()
@@ -320,6 +351,37 @@ class SwarmRuntime:
             self._cancel_events.pop(run_id, None)
             self._live_callbacks.pop(run_id, None)
 
+    def _prefetch_grounding_data(self, run: SwarmRun) -> None:
+        """Fetch run-level grounding data without blocking ``start_run``."""
+        symbols = grounding.extract_symbols_from_user_vars(run.user_vars)
+        if not symbols:
+            return
+
+        symbol_limit = grounding.max_grounding_symbols()
+        if len(symbols) > symbol_limit:
+            logger.warning(
+                "grounding: limiting run %s symbols from %d to %d",
+                run.id,
+                len(symbols),
+                symbol_limit,
+            )
+            symbols = symbols[:symbol_limit]
+
+        try:
+            fetched = grounding.fetch_grounding_data(symbols)
+        except Exception:
+            logger.warning(
+                "grounding: pre-fetch failed for run %s symbols=%s",
+                run.id,
+                symbols,
+                exc_info=True,
+            )
+            return
+
+        if fetched:
+            run.grounding_data = fetched
+            self._store.update_run(run)
+
     def _execute_layer(
         self,
         run: SwarmRun,
@@ -330,6 +392,7 @@ class SwarmRuntime:
         run_dir: Path,
         cancel_event: threading.Event,
         include_shell_tools: bool = False,
+        grounding_block: str = "",
     ) -> dict[str, WorkerResult]:
         """Execute all tasks in a single layer in parallel, with retry on failure.
 
@@ -345,6 +408,7 @@ class SwarmRuntime:
             run_dir: Run directory path.
             cancel_event: Cancellation event.
             include_shell_tools: Whether workers may register shell tools.
+            grounding_block: Pre-rendered "Ground Truth" markdown for workers.
 
         Returns:
             Mapping of task_id -> WorkerResult for all tasks in this layer.
@@ -367,14 +431,16 @@ class SwarmRuntime:
                 agent_spec = agent_map.get(task.agent_id)
                 if agent_spec is None:
                     results[tid] = WorkerResult(
-                        status="failed", summary="",
+                        status="failed",
+                        summary="",
                         error=f"Agent '{task.agent_id}' not found in preset",
                     )
                     continue
 
                 # Mark task as in_progress
                 task_store.update_status(
-                    tid, TaskStatus.in_progress,
+                    tid,
+                    TaskStatus.in_progress,
                     started_at=datetime.now(timezone.utc).isoformat(),
                 )
                 self._emit_event(
@@ -398,6 +464,7 @@ class SwarmRuntime:
                     event_callback=_event_callback,
                     run_id=run.id,
                     include_shell_tools=include_shell_tools,
+                    grounding_block=grounding_block,
                 )
                 futures[future] = tid
                 per_task_budget = agent_spec.timeout_seconds * (agent_spec.max_retries + 1)
@@ -417,7 +484,8 @@ class SwarmRuntime:
                     except Exception as exc:
                         logger.error("Worker for task %s raised exception", tid, exc_info=True)
                         results[tid] = WorkerResult(
-                            status="failed", summary="",
+                            status="failed",
+                            summary="",
                             error=str(exc),
                         )
             except FuturesTimeoutError:
@@ -427,10 +495,12 @@ class SwarmRuntime:
                     pending.cancel()
                     logger.error(
                         "Worker for task %s exceeded layer deadline (%ds)",
-                        tid, layer_deadline,
+                        tid,
+                        layer_deadline,
                     )
                     results[tid] = WorkerResult(
-                        status="timeout", summary="",
+                        status="timeout",
+                        summary="",
                         error=f"Worker exceeded layer deadline of {layer_deadline}s",
                     )
         except KeyboardInterrupt:
@@ -452,6 +522,7 @@ class SwarmRuntime:
         event_callback: Callable[[SwarmEvent], None] | None,
         run_id: str,
         include_shell_tools: bool = False,
+        grounding_block: str = "",
     ) -> WorkerResult:
         """Run a worker with automatic retry on failure.
 
@@ -468,6 +539,9 @@ class SwarmRuntime:
             event_callback: Optional event callback.
             run_id: Run identifier for event emission.
             include_shell_tools: Whether the worker may register shell tools.
+            grounding_block: Pre-rendered "Ground Truth" markdown spliced
+                into the worker's system prompt. Empty string when no
+                symbols were extracted from user_vars.
 
         Returns:
             WorkerResult from the last attempt.
@@ -485,13 +559,18 @@ class SwarmRuntime:
                         "task_retry",
                         agent_id=agent_spec.id,
                         task_id=task.id,
-                        data={"attempt": attempt + 1, "max_retries": max_retries,
-                              "previous_error": result.error if result else None},
+                        data={
+                            "attempt": attempt + 1,
+                            "max_retries": max_retries,
+                            "previous_error": result.error if result else None,
+                        },
                     ),
                 )
                 logger.info(
                     "Retrying task %s (attempt %d/%d)",
-                    task.id, attempt + 1, max_retries + 1,
+                    task.id,
+                    attempt + 1,
+                    max_retries + 1,
                 )
 
             result = run_worker(
@@ -502,6 +581,7 @@ class SwarmRuntime:
                 run_dir=run_dir,
                 event_callback=event_callback,
                 include_shell_tools=include_shell_tools,
+                grounding_block=grounding_block,
             )
 
             cumulative_input_tokens += result.input_tokens
@@ -509,18 +589,22 @@ class SwarmRuntime:
 
             if result.status != "failed":
                 # Success (or timeout/token_limit/completed) — no more retries
-                result = result.model_copy(update={
-                    "input_tokens": cumulative_input_tokens,
-                    "output_tokens": cumulative_output_tokens,
-                })
+                result = result.model_copy(
+                    update={
+                        "input_tokens": cumulative_input_tokens,
+                        "output_tokens": cumulative_output_tokens,
+                    }
+                )
                 return result
 
         # All retries exhausted, return the last failed result with cumulative tokens
         if result is not None:
-            result = result.model_copy(update={
-                "input_tokens": cumulative_input_tokens,
-                "output_tokens": cumulative_output_tokens,
-            })
+            result = result.model_copy(
+                update={
+                    "input_tokens": cumulative_input_tokens,
+                    "output_tokens": cumulative_output_tokens,
+                }
+            )
         return result  # type: ignore[return-value]
 
     def _cancel_remaining_tasks(

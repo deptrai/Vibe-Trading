@@ -1,7 +1,7 @@
 import { createContext, useContext, type ReactNode } from "react";
 
 const messages = {
-  home: "Home", agent: "Agent", runs: "Runs", settings: "Settings",
+  home: "Home", agent: "Agent", runs: "Runs", settings: "Settings", alphaZoo: "Alpha Zoo",
   settingsDesc: "Configure model credentials and market data source tokens for this local project.",
   localApiAccess: "Local API access",
   localApiAccessDesc: "For remote or private Web UI deployments, enter the server API key once in this browser. Localhost use can stay blank.",
@@ -18,7 +18,7 @@ const messages = {
   llmModelName: "Model",
   llmBaseUrl: "Base URL",
   llmApiKey: "API key",
-  llmApiKeyConfigured: "Configured as {key}",
+  llmApiKeyConfigured: "Configured",
   llmApiKeyPlaceholder: "Leave blank to keep the current key",
   llmClearApiKey: "Clear saved API key",
   llmNoApiKeyRequired: "This provider does not require an API key.",
@@ -40,7 +40,7 @@ const messages = {
   dataSourceSettings: "Data Source Settings",
   dataSourceSettingsDesc: "Configure optional market data credentials used by backtests and research agents.",
   tushareToken: "Tushare token",
-  tushareTokenConfigured: "Configured as {key}",
+  tushareTokenConfigured: "Configured",
   tushareTokenPlaceholder: "Leave blank to keep the current token",
   tushareTokenHint: "Used for China A-share, futures, fund, and macro data. If unset, the project falls back to AKShare where available.",
   clearTushareToken: "Clear saved Tushare token",

@@ -40,6 +40,23 @@ class RunStatus(str, Enum):
     cancelled = "cancelled"
 
 
+class WorkerStatus(str, Enum):
+    """Terminal status a worker returns.
+
+    ``incomplete`` is distinct from ``failed``: the worker ran without an
+    exception but produced no substantive deliverable (plan-only stub,
+    fabricated/mock numbers, unparsed tool markup, or a data agent that
+    made no tool call and wrote no report). It must never be folded into
+    ``completed`` (see P01/P03).
+    """
+
+    completed = "completed"
+    failed = "failed"
+    timeout = "timeout"
+    token_limit = "token_limit"
+    incomplete = "incomplete"
+
+
 class SwarmAgentSpec(BaseModel):
     """Role definition for a single agent in a Swarm.
 
@@ -166,6 +183,21 @@ class SwarmRun(BaseModel):
         final_report: Final aggregated report text.
         total_input_tokens: Cumulative input tokens across all workers.
         total_output_tokens: Cumulative output tokens across all workers.
+        provider: LLM provider name in effect when the run started
+            (e.g. ``"openai"``, ``"anthropic"``, ``"deepseek"``). Captured from
+            ``LANGCHAIN_PROVIDER`` at run-creation time. ``None`` if the
+            provider could not be resolved. Per-agent overrides — declared via
+            :attr:`SwarmAgentSpec.model_name` — are not reflected here; this
+            field is the run-level default.
+        model: LLM model name in effect when the run started, captured from
+            ``LANGCHAIN_MODEL_NAME``. Same scoping rules as :attr:`provider`.
+        grounding_data: Pre-fetched OHLCV bars for any suffixed stock or
+            crypto symbols mentioned in :attr:`user_vars`. Captured once at
+            run-creation time by :mod:`src.swarm.grounding` so workers see
+            real recent prices instead of training-data prices. Keyed by the
+            original symbol string; each value is the list of bars returned
+            by the loader. ``None`` when no symbols were detected or every
+            fetch failed.
     """
 
     id: str
@@ -179,13 +211,16 @@ class SwarmRun(BaseModel):
     final_report: str | None = None
     total_input_tokens: int = 0
     total_output_tokens: int = 0
+    provider: str | None = None
+    model: str | None = None
+    grounding_data: dict[str, list[dict]] | None = None
 
 
 class WorkerResult(BaseModel):
     """Return value after worker execution completes.
 
     Attributes:
-        status: "completed" or "failed".
+        status: WorkerStatus — completed|failed|timeout|token_limit|incomplete.
         summary: Execution summary.
         artifact_paths: List of generated artifact file paths.
         iterations: Actual ReAct iterations executed.
@@ -194,7 +229,7 @@ class WorkerResult(BaseModel):
         output_tokens: Cumulative output tokens (exact or estimated).
     """
 
-    status: str
+    status: WorkerStatus
     summary: str
     artifact_paths: list[str] = Field(default_factory=list)
     iterations: int = 0

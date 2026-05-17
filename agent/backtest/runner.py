@@ -14,7 +14,7 @@ import logging
 import re
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Optional
 
 import pandas as pd
 from pydantic import BaseModel, ConfigDict, model_validator, field_validator
@@ -51,6 +51,7 @@ class BacktestConfigSchema(BaseModel):
     source: str = "tushare"
     interval: str = "1D"
     engine: str = "daily"
+    fundamental_fields: Optional[Dict[str, List[str]]] = None
 
     @field_validator("codes")
     @classmethod
@@ -89,6 +90,21 @@ class BacktestConfigSchema(BaseModel):
     def valid_source(cls, v: str) -> str:
         if v not in _VALID_SOURCES:
             raise ValueError(f"unsupported source {v!r}, must be one of {_VALID_SOURCES}")
+        return v
+
+    @field_validator("fundamental_fields")
+    @classmethod
+    def valid_fundamental_fields(
+        cls,
+        v: Optional[Dict[str, List[str]]],
+    ) -> Optional[Dict[str, List[str]]]:
+        if v is None:
+            return v
+        for table, fields in v.items():
+            if not table.strip():
+                raise ValueError("fundamental_fields table names must be non-empty strings")
+            if any(not field.strip() for field in fields):
+                raise ValueError("fundamental_fields field names must be non-empty strings")
         return v
 
     @model_validator(mode="after")
@@ -361,7 +377,24 @@ def main(run_dir: Path) -> None:
 
     Args:
         run_dir: Run directory containing ``config.json`` and ``code/signal_engine.py``.
+            The path is validated against the allowed run roots
+            (``VIBE_TRADING_ALLOWED_RUN_ROOTS`` plus the defaults) before any
+            file is read so an arbitrary filesystem location cannot be used
+            to source ``code/signal_engine.py``.
     """
+    # Guard the CLI entry point with the same root whitelist the MCP
+    # ``backtest`` tool already uses (src/tools/backtest_tool.py:23). Without
+    # this, ``python -m backtest.runner /tmp/attacker_path`` would happily
+    # import ``signal_engine.py`` from anywhere on disk; the AST scrubber
+    # below blocks executable top-level statements but a method body still
+    # runs on instantiation. See ``safe_run_dir`` for the policy.
+    from src.tools.path_utils import safe_run_dir
+    try:
+        run_dir = safe_run_dir(str(run_dir))
+    except ValueError as exc:
+        print(json.dumps({"error": str(exc)}))
+        sys.exit(1)
+
     config_path = run_dir / "config.json"
     if not config_path.exists():
         print(json.dumps({"error": "config.json not found"}))
@@ -432,6 +465,11 @@ def main(run_dir: Path) -> None:
     if not data_map:
         print(json.dumps({"error": "No data fetched"}))
         sys.exit(1)
+
+    if source == "auto":
+        config["_run_card_effective_sources"] = sorted(_group_codes_by_source(codes))
+    else:
+        config["_run_card_effective_sources"] = [source]
 
     # Engine
     engine_type = config.get("engine", "daily")
@@ -646,6 +684,6 @@ class _AutoLoader:
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:
-        print(f"Usage: python -m backtest.runner <run_dir>")
+        print("Usage: python -m backtest.runner <run_dir>")
         sys.exit(1)
     main(Path(sys.argv[1]))
