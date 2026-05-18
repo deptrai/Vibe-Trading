@@ -165,28 +165,91 @@ def factor_analysis(
     Analyzes factor predictive power using Spearman rank IC, IR (IC/std),
     and top/bottom quintile return spreads.
 
+    Supported factor_name values:
+      "momentum" / "mom"   — 20-day price momentum
+      "volatility" / "vol" — negative 20-day rolling volatility (low-vol factor)
+      "rsi"                — 14-day RSI
+      "turnover_rate"      — volume relative to 20-day avg volume
+      "pe_ttm" / "pb"      — proxy: negative 20-day momentum (value tilt)
+
     Args:
-        codes: List of stock codes (e.g. ["000001.SZ", "600519.SH"]).
-        factor_name: Factor column name in daily_basic data (e.g. "pe_ttm", "pb", "turnover_rate").
+        codes: List of ticker codes (e.g. ["AAPL", "MSFT"] or ["000001.SZ"]).
+        factor_name: Factor to compute (see list above).
         start_date: Start date (YYYY-MM-DD).
         end_date: End date (YYYY-MM-DD).
-        source: Data source ("tushare", "yfinance", "auto").
-        top_n: Number of top-ranked stocks per period.
-        bottom_n: Number of bottom-ranked stocks per period.
+        source: Data source hint ("yfinance" or "auto").
+        top_n: Unused (kept for API compatibility).
+        bottom_n: Unused (kept for API compatibility).
     """
-    registry = _get_registry()
-    return registry.execute(
-        "factor_analysis",
-        {
-            "codes": codes,
-            "factor_name": factor_name,
-            "start_date": start_date,
-            "end_date": end_date,
-            "source": source,
-            "top_n": top_n,
-            "bottom_n": bottom_n,
-        },
-    )
+    import time
+
+    try:
+        import numpy as np
+        import pandas as pd
+        import yfinance as yf
+    except ImportError as exc:
+        return json.dumps({"status": "error", "error": f"Missing dependency: {exc}"})
+
+    from src.tools.factor_analysis_tool import run_factor_analysis
+
+    factor_map: dict[str, pd.Series] = {}
+    return_map: dict[str, pd.Series] = {}
+
+    for code in codes:
+        try:
+            df = yf.download(code, start=start_date, end=end_date, progress=False, auto_adjust=True)
+            if df.empty or len(df) < 25:
+                continue
+
+            close = df["Close"].squeeze()
+            volume = df["Volume"].squeeze()
+
+            fn = factor_name.lower()
+            if fn in ("pe_ttm", "pb"):
+                factor = -close.pct_change(20)
+            elif fn in ("momentum", "mom"):
+                factor = close.pct_change(20)
+            elif fn in ("volatility", "vol"):
+                factor = -close.pct_change().rolling(20).std()
+            elif fn == "turnover_rate":
+                vol_avg = volume.rolling(20).mean()
+                factor = volume / vol_avg.replace(0, np.nan)
+            elif fn == "rsi":
+                delta = close.diff()
+                up = delta.clip(lower=0).rolling(14).mean()
+                dn = (-delta.clip(upper=0)).rolling(14).mean()
+                factor = 100 - 100 / (1 + up / dn.replace(0, np.nan))
+            else:
+                factor = close.pct_change(20)
+
+            returns = close.pct_change().shift(-1)
+            common = factor.dropna().index.intersection(returns.dropna().index)
+            if len(common) < 10:
+                continue
+
+            factor_map[code] = factor[common]
+            return_map[code] = returns[common]
+        except Exception:
+            continue
+
+    if not factor_map:
+        return json.dumps({"status": "error", "error": "Could not fetch sufficient data for any code"})
+
+    factor_df = pd.DataFrame(factor_map)
+    return_df = pd.DataFrame(return_map)
+
+    ts = int(time.time())
+    out_dir = f"/tmp/factor_analysis_{ts}"
+    os.makedirs(out_dir, exist_ok=True)
+
+    factor_csv = os.path.join(out_dir, "factor.csv")
+    return_csv = os.path.join(out_dir, "returns.csv")
+
+    factor_df.to_csv(factor_csv)
+    return_df.to_csv(return_csv)
+
+    n_groups = min(5, max(2, len(factor_map)))
+    return run_factor_analysis(factor_csv, return_csv, out_dir, n_groups=n_groups)
 
 
 # ---------------------------------------------------------------------------
@@ -313,27 +376,35 @@ def web_search(query: str, max_results: int = 5) -> str:
 
 
 @mcp.tool
-def write_file(path: str, content: str) -> str:
+def write_file(path: str, content: str, run_dir: str = "") -> str:
     """Write content to a file. Used to create config.json and signal_engine.py
     for backtesting workflows.
 
     Args:
-        path: File path (relative to workspace or absolute).
+        path: File path (relative to run_dir if provided, otherwise absolute).
         content: File content to write.
+        run_dir: Optional run directory to sandbox file writes (e.g. path from backtest run_dir).
     """
     registry = _get_registry()
-    return registry.execute("write_file", {"path": path, "content": content})
+    kwargs: dict = {"path": path, "content": content}
+    if run_dir:
+        kwargs["run_dir"] = run_dir
+    return registry.execute("write_file", kwargs)
 
 
 @mcp.tool
-def read_file(path: str) -> str:
+def read_file(path: str, run_dir: str = "") -> str:
     """Read the contents of a file.
 
     Args:
         path: File path to read.
+        run_dir: Optional run directory to sandbox file reads.
     """
     registry = _get_registry()
-    return registry.execute("read_file", {"path": path})
+    kwargs: dict = {"path": path}
+    if run_dir:
+        kwargs["run_dir"] = run_dir
+    return registry.execute("read_file", kwargs)
 
 
 # ---------------------------------------------------------------------------
@@ -358,6 +429,11 @@ def list_swarm_presets() -> str:
 @mcp.tool
 def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
     """Run a swarm multi-agent team and return the final report.
+
+    DEPRECATED 2026-05-19 — use start_swarm + get_swarm_status + get_run_result
+    instead. The synchronous polling loop here exceeds the 30s proxy budget for
+    any non-trivial preset (6-15 min real runtime). Sunset: 2026-06-19. Tracking:
+    Story 5.5.1.
 
     Assembles a team of specialized agents that collaborate through a DAG workflow.
     For example, the 'investment_committee' preset runs bull analyst, bear analyst,
@@ -413,6 +489,97 @@ def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
             )
 
     return json.dumps({"status": "error", "error": "Swarm timed out after 30 minutes"}, ensure_ascii=False)
+
+
+# ---------------------------------------------------------------------------
+# Async swarm tools (Story 5.5.1 — async polling pattern)
+# ---------------------------------------------------------------------------
+
+# Module-level runtime singleton so cancel_run() can find the cancel_event
+# registered by start_run(). Constructing a fresh SwarmRuntime per call would
+# reset _cancel_events, making cancellation impossible across MCP calls.
+_swarm_runtime_singleton = None
+
+
+def _get_swarm_runtime():
+    """Return a process-wide SwarmRuntime so start/cancel share cancel_events."""
+    global _swarm_runtime_singleton
+    if _swarm_runtime_singleton is None:
+        from src.swarm.runtime import SwarmRuntime
+        from src.swarm.store import SwarmStore, swarm_runs_root
+
+        swarm_dir = swarm_runs_root()
+        swarm_dir.mkdir(parents=True, exist_ok=True)
+        store = SwarmStore(base_dir=swarm_dir)
+        _swarm_runtime_singleton = SwarmRuntime(store=store)
+    return _swarm_runtime_singleton
+
+
+@mcp.tool
+def start_swarm(preset_name: str, variables: dict[str, str]) -> str:
+    """Spawn a swarm run in the background and return immediately (<2s).
+
+    Returns the run_id which can be polled via get_swarm_status(run_id) and
+    finalized via get_run_result(run_id) once status reaches 'completed'.
+    Cancel via cancel_swarm(run_id).
+
+    Replaces run_swarm() for callers gated behind a short HTTP timeout budget
+    (e.g. apps/api proxy 30s); the synchronous run_swarm tool blocks for up
+    to 30 minutes and trips that budget.
+
+    Args:
+        preset_name: Swarm preset name (e.g. 'investment_committee').
+        variables: Required variables for the preset.
+
+    Returns:
+        JSON: {"run_id": "<uuid>", "preset": "<name>", "status": "started"}
+        or {"status": "error", "error": "..."} on unknown preset / DAG failure.
+    """
+    runtime = _get_swarm_runtime()
+    try:
+        run = runtime.start_run(
+            preset_name, variables, include_shell_tools=_include_shell_tools
+        )
+    except FileNotFoundError as exc:
+        return json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False)
+    except ValueError as exc:
+        return json.dumps(
+            {"status": "error", "error": f"DAG validation failed: {exc}"},
+            ensure_ascii=False,
+        )
+
+    return json.dumps(
+        {"run_id": run.id, "preset": preset_name, "status": "started"},
+        ensure_ascii=False,
+    )
+
+
+@mcp.tool
+def cancel_swarm(run_id: str) -> str:
+    """Signal cancellation for an in-flight swarm run.
+
+    Sets a thread-safe cancel event that workers check between DAG layers;
+    in-flight LLM calls complete before the run transitions to 'cancelled'.
+    Idempotent — multiple cancels on the same run are no-ops.
+
+    Args:
+        run_id: The run ID returned by start_swarm.
+
+    Returns:
+        JSON: {"status": "cancelling", "run_id": "..."} on success, or
+        {"status": "error", "error": "Run ... not found or already finished"}.
+    """
+    runtime = _get_swarm_runtime()
+    signalled = runtime.cancel_run(run_id)
+    if not signalled:
+        return json.dumps(
+            {
+                "status": "error",
+                "error": f"Run {run_id} not found or already finished",
+            },
+            ensure_ascii=False,
+        )
+    return json.dumps({"status": "cancelling", "run_id": run_id}, ensure_ascii=False)
 
 
 # ---------------------------------------------------------------------------
