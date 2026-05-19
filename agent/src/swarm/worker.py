@@ -225,19 +225,23 @@ def build_worker_prompt(
     prompt_parts.append(
         "## Execution Rules\n\n"
         "You have a HARD LIMIT of 20 tool calls. After that you will be cut off. Work efficiently.\n\n"
-        "**CRITICAL: every response in iterations 0..N-1 MUST include at least one tool call.** "
-        "A text-only response is treated as a final answer and ends the run. If you have nothing "
-        "left to do, write `report.md` via `write_file` — that IS your final tool call.\n\n"
+        "**CRITICAL: when tool definitions are available, every response in iterations 0..N-2 MUST include at least one tool call.** "
+        "A text-only response before the final iteration is treated as a final answer and ends the run.\n\n"
+        "Legacy strict phrasing for reference: "
+        "\"every response in iterations 0..N-1 MUST include at least one tool call\". "
+        "In this runtime, the last iteration may be text-only because tool definitions can be intentionally disabled.\n\n"
         "**Workflow (intersperse plan + tools, never plan in isolation):**\n"
         "- Iteration 0: write a brief 2-3 line plan in your text **AND in the same response** call `load_skill` "
-          "to get data access methods. Do NOT submit a plan-only response.\n"
+          "if it is available in your tool registry. If `load_skill` is unavailable, call another available tool "
+          "in the same response (for example `read_file` / `write_file`) and do NOT submit a plan-only response.\n"
         "- Subsequent iterations: write ONE focused Python script via `write_file`, then run it with "
           "`bash python script.py` (or use available registry tools if `bash` is unavailable).\n"
         "- Do NOT write long Python code inside bash. Use write_file + bash.\n"
         "- Do NOT fetch data with curl/requests. Use the patterns from load_skill (yfinance, OKX API via Python).\n"
         "- If a script fails, read the error, fix with `edit_file`, re-run. Max 2 retries per script.\n"
         "- If `bash` tool is unavailable in your registry, skip the script-run step and write findings "
-          "directly to `report.md` using `write_file` based on your domain knowledge + upstream context.\n\n"
+          "directly to `report.md` using `write_file` based on your domain knowledge + upstream context. "
+          "If you did not fetch fresh data in this run, do NOT invent specific numeric market values.\n\n"
         "**Finalize (MUST use write_file):**\n"
         "- You MUST call `write_file` with path `report.md` to save your final report as a markdown file.\n"
         "- This is REQUIRED, not optional. Your final response MUST include a write_file call for report.md.\n"
@@ -503,7 +507,8 @@ def run_worker(
             tc_start = time.monotonic()
             args = {**tc.arguments, "run_dir": str(artifact_dir)}
             result = registry.execute(tc.name, args)
-            if tc.name != "load_skill" and not _is_error_result(result):
+            # Count only non-generic successful calls as data evidence.
+            if tc.name not in {"load_skill", "write_file", "read_file", "edit_file"} and not _is_error_result(result):
                 data_tool_calls += 1
             tc_elapsed = time.monotonic() - tc_start
             _emit(
@@ -682,8 +687,10 @@ def _classify_deliverable(
             "phase 2" in low and len(tail) < 80
         ):
             return "plan-only stub (no executed analysis / conclusion)"
-    if is_data_agent and not report_written and data_tool_calls == 0:
-        return "data agent produced no tool calls and no report.md"
+    if is_data_agent and data_tool_calls == 0:
+        if not report_written:
+            return "data agent produced no non-generic tool calls and no report.md"
+        return "data agent produced report.md without non-generic data/tool evidence"
     return None
 
 

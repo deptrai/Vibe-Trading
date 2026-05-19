@@ -75,6 +75,11 @@ def test_data_agent_without_evidence_is_rejected():
     assert _classify_deliverable(REAL_REPORT, is_data_agent=True, report_written=False, data_tool_calls=0)
 
 
+def test_data_agent_report_without_non_generic_evidence_is_rejected():
+    reason = _classify_deliverable(REAL_REPORT, is_data_agent=True, report_written=True, data_tool_calls=0)
+    assert reason and "without non-generic data/tool evidence" in reason
+
+
 def test_synthesis_agent_prose_is_accepted():
     """FALSE-REJECT GUARD: a tool-less synthesis/editor agent that produced
     real prose with no tool calls and no report.md must pass."""
