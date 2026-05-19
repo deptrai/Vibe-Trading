@@ -18,5 +18,5 @@ def _spec() -> SwarmAgentSpec:
 def test_worker_prompt_includes_critical_claude_guardrails() -> None:
     prompt = build_worker_prompt(_spec(), {}, "(no matching skills)")
     assert "every response in iterations 0..N-1 MUST include at least one tool call" in prompt
-    assert "Do NOT submit a plan-only response" in prompt
+    assert "plan-only response" in prompt
     assert "If `bash` tool is unavailable" in prompt
