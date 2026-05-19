@@ -32,6 +32,7 @@ import math
 import os
 import re
 import sys
+import threading
 from pathlib import Path
 from typing import Any
 
@@ -435,6 +436,11 @@ def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
     any non-trivial preset (6-15 min real runtime). Sunset: 2026-06-19. Tracking:
     Story 5.5.1.
 
+    NOTE: runs spawned by ``run_swarm`` construct a fresh ``SwarmRuntime`` and
+    therefore CANNOT be cancelled via ``cancel_swarm`` (which uses the
+    module-level singleton). Prefer ``start_swarm`` for any path that may need
+    a clean cancel.
+
     Assembles a team of specialized agents that collaborate through a DAG workflow.
     For example, the 'investment_committee' preset runs bull analyst, bear analyst,
     risk officer, and portfolio manager in sequence.
@@ -499,24 +505,50 @@ def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
 # registered by start_run(). Constructing a fresh SwarmRuntime per call would
 # reset _cancel_events, making cancellation impossible across MCP calls.
 _swarm_runtime_singleton = None
+_swarm_runtime_lock = threading.Lock()
+
+# Validate preset_name against path traversal + character injection.
+# Presets live under src/swarm/presets/{name}.yaml; allow only filename-safe
+# identifiers so `../../../etc/crontab` and similar inputs are rejected.
+_PRESET_NAME_RE = re.compile(r"^[A-Za-z0-9_-]{1,80}$")
 
 
 def _get_swarm_runtime():
-    """Return a process-wide SwarmRuntime so start/cancel share cancel_events."""
-    global _swarm_runtime_singleton
-    if _swarm_runtime_singleton is None:
-        from src.swarm.runtime import SwarmRuntime
-        from src.swarm.store import SwarmStore, swarm_runs_root
+    """Return a process-wide SwarmRuntime so start/cancel share cancel_events.
 
-        swarm_dir = swarm_runs_root()
-        swarm_dir.mkdir(parents=True, exist_ok=True)
-        store = SwarmStore(base_dir=swarm_dir)
-        _swarm_runtime_singleton = SwarmRuntime(store=store)
+    Thread-safe — guards the singleton init with ``_swarm_runtime_lock`` so
+    two concurrent FastMCP-dispatched ``start_swarm`` calls cannot both
+    construct a fresh SwarmRuntime and silently discard one's
+    ``_cancel_events`` (Story 5.5.1 review finding C1).
+    """
+    global _swarm_runtime_singleton
+    if _swarm_runtime_singleton is not None:
+        return _swarm_runtime_singleton
+    with _swarm_runtime_lock:
+        if _swarm_runtime_singleton is None:
+            from src.swarm.runtime import SwarmRuntime
+            from src.swarm.store import SwarmStore, swarm_runs_root
+
+            swarm_dir = swarm_runs_root()
+            swarm_dir.mkdir(parents=True, exist_ok=True)
+            store = SwarmStore(base_dir=swarm_dir)
+            _swarm_runtime_singleton = SwarmRuntime(store=store)
     return _swarm_runtime_singleton
 
 
+def _ownership_error(run_id: str) -> str:
+    return json.dumps(
+        {"status": "error", "error": f"Run {run_id} not owned by this account"},
+        ensure_ascii=False,
+    )
+
+
 @mcp.tool
-def start_swarm(preset_name: str, variables: dict[str, str]) -> str:
+def start_swarm(
+    preset_name: str,
+    variables: dict[str, str],
+    account_id: str | None = None,
+) -> str:
     """Spawn a swarm run in the background and return immediately (<2s).
 
     Returns the run_id which can be polled via get_swarm_status(run_id) and
@@ -528,23 +560,58 @@ def start_swarm(preset_name: str, variables: dict[str, str]) -> str:
     to 30 minutes and trips that budget.
 
     Args:
-        preset_name: Swarm preset name (e.g. 'investment_committee').
+        preset_name: Swarm preset name (e.g. 'investment_committee'). Must
+            match ``^[A-Za-z0-9_-]{1,80}$`` to prevent path traversal.
         variables: Required variables for the preset.
+        account_id: Identifier of the account that owns this run. Persisted on
+            the SwarmRun record and enforced by every ownership-aware MCP tool
+            (Story 5.5.1). ``None`` skips ownership (legacy / direct sandbox
+            bypass).
 
     Returns:
         JSON: {"run_id": "<uuid>", "preset": "<name>", "status": "started"}
         or {"status": "error", "error": "..."} on unknown preset / DAG failure.
     """
+    if not isinstance(preset_name, str) or not _PRESET_NAME_RE.match(preset_name):
+        return json.dumps(
+            {"status": "error", "error": "Invalid preset name"}, ensure_ascii=False
+        )
+
+    # Pre-validate against list_presets() so no thread is spawned and no
+    # SwarmRun record is written for an unknown preset (AC1 Task 1.3).
+    try:
+        from src.swarm.presets import list_presets
+
+        known = {p["name"] for p in list_presets()}
+    except Exception as exc:  # pragma: no cover — defensive only
+        return json.dumps(
+            {"status": "error", "error": f"Could not load preset registry: {exc}"},
+            ensure_ascii=False,
+        )
+    if preset_name not in known:
+        return json.dumps(
+            {"status": "error", "error": f"Unknown preset: {preset_name}"},
+            ensure_ascii=False,
+        )
+
     runtime = _get_swarm_runtime()
     try:
         run = runtime.start_run(
-            preset_name, variables, include_shell_tools=_include_shell_tools
+            preset_name,
+            variables,
+            include_shell_tools=_include_shell_tools,
+            account_id=account_id,
         )
     except FileNotFoundError as exc:
         return json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False)
     except ValueError as exc:
         return json.dumps(
             {"status": "error", "error": f"DAG validation failed: {exc}"},
+            ensure_ascii=False,
+        )
+    except (FileExistsError, OSError) as exc:
+        return json.dumps(
+            {"status": "error", "error": f"Could not persist run: {exc}"},
             ensure_ascii=False,
         )
 
@@ -555,31 +622,48 @@ def start_swarm(preset_name: str, variables: dict[str, str]) -> str:
 
 
 @mcp.tool
-def cancel_swarm(run_id: str) -> str:
+def cancel_swarm(run_id: str, account_id: str | None = None) -> str:
     """Signal cancellation for an in-flight swarm run.
 
     Sets a thread-safe cancel event that workers check between DAG layers;
-    in-flight LLM calls complete before the run transitions to 'cancelled'.
-    Idempotent — multiple cancels on the same run are no-ops.
+    in-flight LLM calls complete before the run transitions to ``cancelled``.
+
+    Calling ``cancel_swarm`` on a run that has already reached a terminal
+    state (``completed`` / ``failed`` / ``cancelled``) returns
+    ``{"status": "noop", "run_status": "<terminal>"}`` rather than an error
+    envelope — callers polling status concurrently may race past the
+    cancellation window, and an error response would mislead them.
 
     Args:
         run_id: The run ID returned by start_swarm.
-
-    Returns:
-        JSON: {"status": "cancelling", "run_id": "..."} on success, or
-        {"status": "error", "error": "Run ... not found or already finished"}.
+        account_id: Account that owns the run (Story 5.5.1 ownership). When
+            set, must match the run's persisted ``account_id`` or 403-equivalent
+            error is returned.
     """
+    store = _get_swarm_store()
+    run = store.load_run(run_id)
+    if account_id is not None and run is not None and run.account_id != account_id:
+        return _ownership_error(run_id)
+
     runtime = _get_swarm_runtime()
     signalled = runtime.cancel_run(run_id)
-    if not signalled:
+    if signalled:
         return json.dumps(
-            {
-                "status": "error",
-                "error": f"Run {run_id} not found or already finished",
-            },
+            {"status": "cancelling", "run_id": run_id}, ensure_ascii=False
+        )
+
+    # Not signalled → either unknown run, or already terminal. Disambiguate
+    # so the caller doesn't confuse a successful-but-finished run with a
+    # cancellation failure.
+    if run is None:
+        return json.dumps(
+            {"status": "error", "error": f"Run {run_id} not found"},
             ensure_ascii=False,
         )
-    return json.dumps({"status": "cancelling", "run_id": run_id}, ensure_ascii=False)
+    return json.dumps(
+        {"status": "noop", "run_status": run.status.value, "run_id": run_id},
+        ensure_ascii=False,
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -745,41 +829,49 @@ def _run_to_dict(run) -> dict:
 
 
 @mcp.tool
-def get_swarm_status(run_id: str) -> str:
+def get_swarm_status(run_id: str, account_id: str | None = None) -> str:
     """Get the current status of a swarm run.
 
     Returns status, task progress, and token usage for the specified run.
     Use this to poll a long-running swarm without blocking.
 
     Args:
-        run_id: The run ID returned by run_swarm.
+        run_id: The run ID returned by start_swarm / run_swarm.
+        account_id: When set, must match the run's persisted ``account_id``
+            (Story 5.5.1 ownership filter); otherwise 403-equivalent error.
     """
     store = _get_swarm_store()
     run = store.load_run(run_id)
     if run is None:
         return json.dumps({"status": "error", "error": f"Run {run_id} not found"}, ensure_ascii=False)
+    if account_id is not None and run.account_id != account_id:
+        return _ownership_error(run_id)
     return json.dumps(_run_to_dict(run), ensure_ascii=False, indent=2)
 
 
 @mcp.tool
-def get_run_result(run_id: str) -> str:
+def get_run_result(run_id: str, account_id: str | None = None) -> str:
     """Get the final report and task summaries of a completed swarm run.
 
     Returns the final_report text and per-task summaries. If the run is
     still in progress, returns current status instead.
 
     Args:
-        run_id: The run ID returned by run_swarm.
+        run_id: The run ID returned by start_swarm / run_swarm.
+        account_id: When set, must match the run's persisted ``account_id``
+            (Story 5.5.1 ownership filter); otherwise 403-equivalent error.
     """
     store = _get_swarm_store()
     run = store.load_run(run_id)
     if run is None:
         return json.dumps({"status": "error", "error": f"Run {run_id} not found"}, ensure_ascii=False)
+    if account_id is not None and run.account_id != account_id:
+        return _ownership_error(run_id)
     return json.dumps(_run_to_dict(run), ensure_ascii=False, indent=2)
 
 
 @mcp.tool
-def list_runs(limit: int = 20) -> str:
+def list_runs(limit: int = 20, account_id: str | None = None) -> str:
     """List recent swarm runs sorted by creation time (newest first).
 
     Returns run IDs, presets, statuses, and creation timestamps.
@@ -787,9 +879,12 @@ def list_runs(limit: int = 20) -> str:
 
     Args:
         limit: Maximum number of runs to return (default 20).
+        account_id: When set, only runs owned by this account are returned
+            (Story 5.5.1 ownership filter). When ``None``, returns every run
+            — used by direct sandbox bypass and admin paths.
     """
     store = _get_swarm_store()
-    runs = store.list_runs(limit=limit)
+    runs = store.list_runs(limit=limit, account_id=account_id)
     items = []
     for run in runs:
         items.append(

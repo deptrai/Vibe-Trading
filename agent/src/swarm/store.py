@@ -161,11 +161,17 @@ class SwarmStore:
             raise FileNotFoundError(f"Run directory not found: {rd.name}")
         self._atomic_write(rd / "run.json", run.model_dump_json(indent=2))
 
-    def list_runs(self, limit: int = 50) -> list[SwarmRun]:
-        """List all runs sorted by created_at descending.
+    def list_runs(self, limit: int = 50, account_id: str | None = None) -> list[SwarmRun]:
+        """List runs sorted by created_at descending.
 
         Args:
             limit: Maximum number of runs to return.
+            account_id: When set, only runs whose ``SwarmRun.account_id`` matches
+                are returned. Runs with ``account_id is None`` (legacy/bypass
+                paths) are filtered out — they belong to nobody and are
+                inaccessible via the ownership-aware MCP surface. When ``None``
+                (default), no filter is applied (full-access path; used by
+                direct sandbox bypass and admin tooling).
 
         Returns:
             List of SwarmRun instances.
@@ -181,6 +187,8 @@ class SwarmStore:
             if run_file.exists():
                 try:
                     run = SwarmRun.model_validate_json(run_file.read_text(encoding="utf-8"))
+                    if account_id is not None and run.account_id != account_id:
+                        continue
                     runs.append(run)
                 except (json.JSONDecodeError, ValueError):
                     continue

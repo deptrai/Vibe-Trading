@@ -214,6 +214,10 @@ class SwarmRun(BaseModel):
     provider: str | None = None
     model: str | None = None
     grounding_data: dict[str, list[dict]] | None = None
+    account_id: str | None = None
+    """Identifier of the account that owns this run, enforced by the proxy
+    + MCP layer (Story 5.5.1 ownership filter). ``None`` means no ownership
+    was claimed (legacy ``run_swarm`` direct-bypass path)."""
 
 
 class WorkerResult(BaseModel):

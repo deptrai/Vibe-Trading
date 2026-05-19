@@ -32,6 +32,21 @@ if str(AGENT_DIR) not in sys.path:
     sys.path.insert(0, str(AGENT_DIR))
 
 
+@pytest.fixture(autouse=True)
+def _reset_swarm_singleton():
+    """Reset the module-level SwarmRuntime singleton between tests.
+
+    Without this, a daemon thread from one test can still be holding
+    ``_cancel_events`` when the next test runs, producing phantom in-progress
+    runs and flaky `list_runs` results (Story 5.5.1 review finding M3).
+    """
+    import mcp_server
+
+    mcp_server._swarm_runtime_singleton = None
+    yield
+    mcp_server._swarm_runtime_singleton = None
+
+
 def _call_tool(tool_callable, *args, **kwargs) -> dict:
     """Invoke an ``@mcp.tool``-decorated function and parse the JSON return.
 
@@ -119,6 +134,7 @@ def test_start_then_cancel_roundtrip() -> None:
         pytest.skip(f"swarm did not start (env-dependent): {started}")
 
     run_id = started["run_id"]
+    cancel_issued_at = time.monotonic()
     cancelled = _call_tool(cancel_swarm, run_id=run_id)
     assert cancelled.get("status") == "cancelling"
     assert cancelled.get("run_id") == run_id
@@ -135,6 +151,20 @@ def test_start_then_cancel_roundtrip() -> None:
             break
         time.sleep(2)
 
-    assert final_status in ("cancelled", "completed", "failed"), (
-        f"swarm did not reach a terminal state within 60s, last={final_status}"
+    # If the swarm reached a terminal state inside the cancel window (<5s),
+    # the run completed before the cancel propagated — race we cannot win,
+    # accept ``completed`` only when the round-trip was clearly that fast.
+    # Otherwise the test MUST observe ``cancelled`` — anything else is a
+    # cancellation regression. (Story 5.5.1 review finding M2.)
+    elapsed = time.monotonic() - cancel_issued_at
+    if final_status == "cancelled":
+        return
+    if final_status in ("completed", "failed") and elapsed < 5.0:
+        pytest.skip(
+            f"swarm reached {final_status} in {elapsed:.2f}s before cancel "
+            "could propagate — pre-completion race, not a cancel regression"
+        )
+    assert final_status == "cancelled", (
+        f"expected status=cancelled after cancel_swarm; got {final_status} "
+        f"after {elapsed:.1f}s"
     )

@@ -75,6 +75,7 @@ class SwarmRuntime:
         user_vars: dict[str, str],
         live_callback: Callable | None = None,
         include_shell_tools: bool = False,
+        account_id: str | None = None,
     ) -> SwarmRun:
         """Start a swarm run. Returns immediately, execution happens in background.
 
@@ -83,6 +84,9 @@ class SwarmRuntime:
             user_vars: User-provided variables for prompt templates.
             live_callback: Optional callback invoked for each event in real-time.
             include_shell_tools: Whether workers may register shell tools.
+            account_id: Identifier of the account that owns this run. Persisted
+                on the SwarmRun record and enforced by the ownership-aware MCP
+                tools (Story 5.5.1).
 
         Returns:
             The created SwarmRun instance (status=pending initially).
@@ -93,6 +97,7 @@ class SwarmRuntime:
         """
         run = build_run_from_preset(preset_name, user_vars)
         validate_dag(run.tasks)
+        run.account_id = account_id
 
         # Capture which provider/model the run was launched against so the
         # serialized run.json carries enough context for cost audits and
