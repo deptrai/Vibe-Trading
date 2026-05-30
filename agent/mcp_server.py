@@ -26,6 +26,8 @@ Claude Desktop config:
 
 from __future__ import annotations
 
+import base64
+import hashlib
 import json
 import os
 import re
@@ -41,6 +43,9 @@ if str(AGENT_DIR) not in sys.path:
 from fastmcp import FastMCP
 
 mcp = FastMCP("Vibe-Trading")
+
+_ALLOWED_JOURNAL_STAGE_EXT = {".csv", ".xlsx", ".xls"}
+_MAX_JOURNAL_STAGE_BYTES = 10 * 1024 * 1024
 
 
 # ---------------------------------------------------------------------------
@@ -546,6 +551,58 @@ def list_runs(limit: int = 20) -> str:
 # ---------------------------------------------------------------------------
 # Trade journal tool
 # ---------------------------------------------------------------------------
+
+@mcp.tool
+def stage_trade_journal(filename: str, content_base64: str) -> str:
+    """Stage an uploaded trade journal into a Vibe-Trading import root.
+
+    OpenCode tools run inside the Epsilon sandbox, while this MCP server often
+    runs on the host. Sandbox paths such as /workspace/uploads/*.csv are not
+    readable from the host process, so callers can upload the file bytes here
+    and then pass the returned path to analyze_trade_journal/extract_shadow_strategy.
+
+    Args:
+        filename: Original file name. Only .csv/.xlsx/.xls are accepted.
+        content_base64: Base64-encoded file content.
+    """
+    safe_name = re.sub(r"[^A-Za-z0-9._-]+", "_", Path(filename).name).strip("._")
+    if not safe_name:
+        safe_name = "journal.csv"
+
+    ext = Path(safe_name).suffix.lower()
+    if ext not in _ALLOWED_JOURNAL_STAGE_EXT:
+        return json.dumps({
+            "status": "error",
+            "error": f"Unsupported extension {ext}. Expected .csv/.xlsx/.xls",
+        }, ensure_ascii=False)
+
+    try:
+        content = base64.b64decode(content_base64, validate=True)
+    except Exception as exc:
+        return json.dumps({
+            "status": "error",
+            "error": f"Invalid base64 content: {exc}",
+        }, ensure_ascii=False)
+
+    if len(content) > _MAX_JOURNAL_STAGE_BYTES:
+        return json.dumps({
+            "status": "error",
+            "error": f"Journal too large: {len(content)} bytes > {_MAX_JOURNAL_STAGE_BYTES}",
+        }, ensure_ascii=False)
+
+    digest = hashlib.sha256(content).hexdigest()[:16]
+    stem = Path(safe_name).stem[:80] or "journal"
+    target_dir = AGENT_DIR / "uploads" / "shadow_journals"
+    target_dir.mkdir(parents=True, exist_ok=True)
+    target = target_dir / f"{stem}-{digest}{ext}"
+    target.write_bytes(content)
+
+    return json.dumps({
+        "status": "ok",
+        "path": str(target),
+        "bytes_written": len(content),
+    }, ensure_ascii=False)
+
 
 @mcp.tool
 def analyze_trade_journal(
