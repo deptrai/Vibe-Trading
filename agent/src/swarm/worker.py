@@ -32,6 +32,31 @@ _DEFAULT_TIMEOUT_SECONDS = int(os.getenv("SWARM_WORKER_TIMEOUT", "300"))
 _MAX_TOKEN_ESTIMATE = 60_000
 
 
+def _no_model_fallback_enabled() -> bool:
+    """Whether worker may complete with mock summary when model config is missing."""
+    return os.getenv("SWARM_ALLOW_NO_MODEL_FALLBACK", "").strip().lower() in {
+        "1", "true", "yes", "on",
+    }
+
+
+def _build_no_model_summary(agent_spec: SwarmAgentSpec, task: SwarmTask, user_prompt: str) -> str:
+    """Build deterministic local fallback summary when LLM model is unset."""
+    lines = [
+        "[local-fallback] Worker completed without external LLM model.",
+        f"agent_id: {agent_spec.id}",
+        f"task_id: {task.id}",
+        "reason: LANGCHAIN_MODEL_NAME is not set",
+        "",
+        "Task objective:",
+        user_prompt,
+        "",
+        "Notes:",
+        "- This is a local runtime fallback for E2E pipeline validation.",
+        "- Configure LANGCHAIN_MODEL_NAME (+ provider key) for full analytical output.",
+    ]
+    return "\n".join(lines)
+
+
 def _emit(
     callback: Callable[[SwarmEvent], None] | None,
     event_type: str,
@@ -222,7 +247,51 @@ def run_worker(
     registry = build_filtered_registry(agent_spec.tools, include_shell_tools=include_shell_tools)
 
     # 2. Create LLM
-    llm = ChatLLM(model_name=agent_spec.model_name)
+    try:
+        llm = ChatLLM(model_name=agent_spec.model_name)
+    except Exception as exc:
+        if _no_model_fallback_enabled() and "LANGCHAIN_MODEL_NAME is not set" in str(exc):
+            # Build minimal summary fallback before full loop for local E2E.
+            class _FallbackDict(dict):
+                def __missing__(self, key: str) -> str:
+                    return f"(determine the appropriate {key} based on the objective)"
+
+            template_vars = _FallbackDict(user_vars)
+            try:
+                early_user_prompt = task.prompt_template.format_map(_FallbackDict(template_vars))
+            except Exception:
+                early_user_prompt = task.prompt_template
+
+            summary = _build_no_model_summary(agent_spec, task, early_user_prompt)
+            _emit(
+                event_callback,
+                "worker_completed",
+                agent_id,
+                task_id,
+                {"iterations": 1, "fallback": "missing_model_init"},
+            )
+            artifact_dir = run_dir / "artifacts" / agent_id
+            artifact_dir.mkdir(parents=True, exist_ok=True)
+            _write_summary(artifact_dir, summary)
+            return WorkerResult(
+                status="completed",
+                summary=summary,
+                artifact_paths=_collect_artifacts(artifact_dir),
+                iterations=1,
+                input_tokens=0,
+                output_tokens=0,
+            )
+
+        error_msg = f"LLM init failed: {exc}"
+        _emit(event_callback, "worker_failed", agent_id, task_id, {"error": error_msg})
+        return WorkerResult(
+            status="failed",
+            summary="",
+            iterations=0,
+            error=error_msg,
+            input_tokens=0,
+            output_tokens=0,
+        )
 
     # 3. Build system prompt with filtered skills
     skills_loader = SkillsLoader()
@@ -340,6 +409,25 @@ def run_worker(
                 on_text_chunk=_on_text_chunk,
             )
         except Exception as exc:
+            if _no_model_fallback_enabled() and "LANGCHAIN_MODEL_NAME is not set" in str(exc):
+                summary = _build_no_model_summary(agent_spec, task, user_prompt)
+                _emit(
+                    event_callback,
+                    "worker_completed",
+                    agent_id,
+                    task_id,
+                    {"iterations": iteration + 1, "fallback": "missing_model"},
+                )
+                _write_summary(artifact_dir, summary)
+                return WorkerResult(
+                    status="completed",
+                    summary=summary,
+                    artifact_paths=_collect_artifacts(artifact_dir),
+                    iterations=iteration + 1,
+                    input_tokens=total_input_tokens,
+                    output_tokens=total_output_tokens,
+                )
+
             error_msg = f"LLM call failed at iteration {iteration}: {exc}"
             logger.warning(error_msg)
             _emit(event_callback, "worker_failed", agent_id, task_id, {"error": error_msg})
@@ -395,10 +483,24 @@ def run_worker(
             args = {**tc.arguments, "run_dir": str(artifact_dir)}
             result = registry.execute(tc.name, args)
             tc_elapsed = time.monotonic() - tc_start
+            tool_status = "ok"
+            tool_error: str | None = None
+            try:
+                parsed = json.loads(result)
+                if isinstance(parsed, dict):
+                    status = parsed.get("status")
+                    if isinstance(status, str) and status:
+                        tool_status = status
+                    error = parsed.get("error")
+                    if isinstance(error, str) and error:
+                        tool_error = error
+            except Exception:
+                # Non-JSON tool outputs are allowed; keep default status.
+                pass
             _emit(
                 event_callback, "tool_result", agent_id, task_id,
                 {"tool": tc.name, "elapsed_ms": int(tc_elapsed * 1000),
-                 "status": "ok", "iteration": iteration},
+                 "status": tool_status, "error": tool_error, "iteration": iteration},
             )
             messages.append(
                 ContextBuilder.format_tool_result(tc.id, tc.name, result[:10_000])

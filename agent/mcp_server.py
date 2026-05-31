@@ -326,7 +326,11 @@ def list_swarm_presets() -> str:
 
 
 @mcp.tool
-def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
+def run_swarm(
+    preset_name: str,
+    variables: dict[str, str],
+    account_id: str | None = None,
+) -> str:
     """Run a swarm multi-agent team and return the final report.
 
     Assembles a team of specialized agents that collaborate through a DAG workflow.
@@ -338,6 +342,7 @@ def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
     Args:
         preset_name: Swarm preset name (e.g. 'investment_committee', 'quant_strategy_desk').
         variables: Required variables for the preset (e.g. {"target": "AAPL.US", "market": "US"}).
+        account_id: Optional owner account id for ownership checks.
     """
     import time
     from src.swarm.runtime import SwarmRuntime
@@ -349,7 +354,7 @@ def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
     runtime = SwarmRuntime(store=store)
 
     try:
-        run = runtime.start_run(preset_name, variables)
+        run = runtime.start_run(preset_name, variables, account_id=account_id)
     except FileNotFoundError as exc:
         return json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False)
     except ValueError as exc:
@@ -377,6 +382,47 @@ def run_swarm(preset_name: str, variables: dict[str, str]) -> str:
             }, ensure_ascii=False, indent=2)
 
     return json.dumps({"status": "error", "error": "Swarm timed out after 30 minutes"}, ensure_ascii=False)
+
+
+# ---------------------------------------------------------------------------
+# Async swarm tools
+# ---------------------------------------------------------------------------
+
+@mcp.tool
+def start_swarm(
+    preset_name: str,
+    variables: dict[str, str],
+    account_id: str | None = None,
+) -> str:
+    """Start a swarm run asynchronously and return immediately with run_id.
+
+    This is the non-blocking counterpart to run_swarm(). Use get_swarm_status()
+    to poll progress and get_run_result() once terminal.
+
+    Args:
+        preset_name: Swarm preset name (e.g. 'investment_committee').
+        variables: Required variables for the preset.
+        account_id: Optional owner account id for ownership checks.
+    """
+    from src.swarm.runtime import SwarmRuntime
+    from src.swarm.store import SwarmStore
+
+    swarm_dir = AGENT_DIR / ".swarm" / "runs"
+    store = SwarmStore(base_dir=swarm_dir)
+    runtime = SwarmRuntime(store=store)
+
+    try:
+        run = runtime.start_run(preset_name, variables, account_id=account_id)
+    except FileNotFoundError as exc:
+        return json.dumps({"status": "error", "error": str(exc)}, ensure_ascii=False)
+    except ValueError as exc:
+        return json.dumps({"status": "error", "error": f"DAG validation failed: {exc}"}, ensure_ascii=False)
+
+    return json.dumps({
+        "status": "started",
+        "run_id": run.id,
+        "preset": run.preset_name,
+    }, ensure_ascii=False, indent=2)
 
 
 # ---------------------------------------------------------------------------
@@ -468,6 +514,11 @@ def _get_swarm_store():
     return SwarmStore(base_dir=swarm_dir)
 
 
+def _get_swarm_runtime():
+    from src.swarm.runtime import SwarmRuntime
+    return SwarmRuntime(store=_get_swarm_store())
+
+
 def _run_to_dict(run) -> dict:
     return {
         "run_id": run.id,
@@ -489,42 +540,93 @@ def _run_to_dict(run) -> dict:
     }
 
 
+def _run_with_live_tasks(run):
+    """Best-effort live task refresh from task files while run is in-flight."""
+    try:
+        from src.swarm.task_store import TaskStore
+        store = _get_swarm_store()
+        task_store = TaskStore(store.run_dir(run.id))
+        live_tasks = task_store.load_all()
+        if not live_tasks:
+            return run
+        live_by_id = {t.id: t for t in live_tasks}
+        ordered = []
+        seen: set[str] = set()
+        for task in run.tasks:
+            ordered.append(live_by_id.get(task.id, task))
+            seen.add(task.id)
+        for task in live_tasks:
+            if task.id not in seen:
+                ordered.append(task)
+        return run.model_copy(update={"tasks": ordered})
+    except Exception:
+        return run
+
+
+def _check_swarm_ownership(run, account_id: str | None) -> tuple[bool, str]:
+    """Validate that account_id can access the run.
+
+    Returns:
+        (allowed, message). message is only meaningful when allowed=False.
+    """
+    if not account_id:
+        return True, ""
+    run_account_id = getattr(run, "account_id", None)
+    if not run_account_id:
+        return False, "Run has no owner metadata; access denied for account-scoped request"
+    if run_account_id != account_id:
+        return False, "Run not owned by this account"
+    return True, ""
+
+
 @mcp.tool
-def get_swarm_status(run_id: str) -> str:
+def get_swarm_status(run_id: str, account_id: str | None = None) -> str:
     """Get the current status of a swarm run.
 
     Returns status, task progress, and token usage for the specified run.
     Use this to poll a long-running swarm without blocking.
 
     Args:
-        run_id: The run ID returned by run_swarm.
+        run_id: The run ID returned by start_swarm/run_swarm.
+        account_id: Optional owner account id for ownership checks.
     """
     store = _get_swarm_store()
     run = store.load_run(run_id)
     if run is None:
         return json.dumps({"status": "error", "error": f"Run {run_id} not found"}, ensure_ascii=False)
+    allowed, message = _check_swarm_ownership(run, account_id)
+    if not allowed:
+        return json.dumps({"status": "error", "error": message}, ensure_ascii=False)
+    if run.status.value in {"pending", "running"}:
+        run = _run_with_live_tasks(run)
     return json.dumps(_run_to_dict(run), ensure_ascii=False, indent=2)
 
 
 @mcp.tool
-def get_run_result(run_id: str) -> str:
+def get_run_result(run_id: str, account_id: str | None = None) -> str:
     """Get the final report and task summaries of a completed swarm run.
 
     Returns the final_report text and per-task summaries. If the run is
     still in progress, returns current status instead.
 
     Args:
-        run_id: The run ID returned by run_swarm.
+        run_id: The run ID returned by start_swarm/run_swarm.
+        account_id: Optional owner account id for ownership checks.
     """
     store = _get_swarm_store()
     run = store.load_run(run_id)
     if run is None:
         return json.dumps({"status": "error", "error": f"Run {run_id} not found"}, ensure_ascii=False)
+    allowed, message = _check_swarm_ownership(run, account_id)
+    if not allowed:
+        return json.dumps({"status": "error", "error": message}, ensure_ascii=False)
+    if run.status.value in {"pending", "running"}:
+        run = _run_with_live_tasks(run)
     return json.dumps(_run_to_dict(run), ensure_ascii=False, indent=2)
 
 
 @mcp.tool
-def list_runs(limit: int = 20) -> str:
+def list_runs(limit: int = 20, account_id: str | None = None) -> str:
     """List recent swarm runs sorted by creation time (newest first).
 
     Returns run IDs, presets, statuses, and creation timestamps.
@@ -532,9 +634,12 @@ def list_runs(limit: int = 20) -> str:
 
     Args:
         limit: Maximum number of runs to return (default 20).
+        account_id: Optional owner account id for ownership checks.
     """
     store = _get_swarm_store()
     runs = store.list_runs(limit=limit)
+    if account_id:
+        runs = [run for run in runs if getattr(run, "account_id", None) == account_id]
     items = []
     for run in runs:
         items.append({
@@ -546,6 +651,51 @@ def list_runs(limit: int = 20) -> str:
             "total_output_tokens": run.total_output_tokens,
         })
     return json.dumps(items, ensure_ascii=False, indent=2)
+
+
+@mcp.tool
+def cancel_swarm(run_id: str, account_id: str | None = None) -> str:
+    """Request cancellation of an in-flight swarm run.
+
+    Args:
+        run_id: The run ID returned by start_swarm/run_swarm.
+        account_id: Optional owner account id for ownership checks.
+    """
+    from src.swarm.models import RunStatus
+
+    store = _get_swarm_store()
+    run = store.load_run(run_id)
+    if run is None:
+        return json.dumps({"status": "error", "error": f"Run {run_id} not found"}, ensure_ascii=False)
+
+    allowed, message = _check_swarm_ownership(run, account_id)
+    if not allowed:
+        return json.dumps({"status": "error", "error": message}, ensure_ascii=False)
+
+    if run.status in (RunStatus.completed, RunStatus.failed, RunStatus.cancelled):
+        return json.dumps({
+            "status": "noop",
+            "run_id": run_id,
+            "run_status": run.status.value,
+        }, ensure_ascii=False, indent=2)
+
+    runtime = _get_swarm_runtime()
+    ok = runtime.cancel_run(run_id)
+    if not ok:
+        # Raced with completion; return noop if now terminal, else surface error.
+        latest = store.load_run(run_id)
+        if latest and latest.status in (RunStatus.completed, RunStatus.failed, RunStatus.cancelled):
+            return json.dumps({
+                "status": "noop",
+                "run_id": run_id,
+                "run_status": latest.status.value,
+            }, ensure_ascii=False, indent=2)
+        return json.dumps({
+            "status": "error",
+            "error": f"No active run {run_id}",
+        }, ensure_ascii=False)
+
+    return json.dumps({"status": "cancelling", "run_id": run_id}, ensure_ascii=False, indent=2)
 
 
 # ---------------------------------------------------------------------------

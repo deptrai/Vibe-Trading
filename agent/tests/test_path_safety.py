@@ -134,3 +134,12 @@ class TestSafeRunDir:
         result = safe_run_dir(str(agent_runs))
 
         assert result == agent_runs.resolve()
+
+    def test_default_agent_swarm_runs_dir_accepted(self, tmp_path: Path, monkeypatch):
+        monkeypatch.delenv("VIBE_TRADING_ALLOWED_RUN_ROOTS", raising=False)
+        swarm_run = Path(__file__).resolve().parents[1] / ".swarm" / "runs" / "safe_run"
+        swarm_run.mkdir(parents=True, exist_ok=True)
+
+        result = safe_run_dir(str(swarm_run))
+
+        assert result == swarm_run.resolve()

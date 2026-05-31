@@ -71,6 +71,7 @@ class SwarmRuntime:
         self,
         preset_name: str,
         user_vars: dict[str, str],
+        account_id: str | None = None,
         live_callback: Callable | None = None,
         include_shell_tools: bool = False,
     ) -> SwarmRun:
@@ -79,6 +80,7 @@ class SwarmRuntime:
         Args:
             preset_name: YAML preset name to execute.
             user_vars: User-provided variables for prompt templates.
+            account_id: Optional owner account id for ownership checks.
             live_callback: Optional callback invoked for each event in real-time.
             include_shell_tools: Whether workers may register shell tools.
 
@@ -90,6 +92,7 @@ class SwarmRuntime:
             ValueError: If DAG validation fails.
         """
         run = build_run_from_preset(preset_name, user_vars)
+        run.account_id = account_id
         validate_dag(run.tasks)
         self._store.create_run(run)
 
@@ -143,6 +146,14 @@ class SwarmRuntime:
                 cb(event)
             except Exception:
                 logger.warning("Live callback failed for run %s", run_id, exc_info=True)
+
+    def _persist_running_snapshot(self, run: SwarmRun, task_store: TaskStore) -> None:
+        """Persist a live run snapshot so status polling stays current mid-run."""
+        try:
+            run.tasks = task_store.load_all()
+            self._store.update_run(run)
+        except Exception:
+            logger.warning("Failed to persist live snapshot for run %s", run.id, exc_info=True)
 
     def _make_event(
         self,
@@ -249,7 +260,7 @@ class SwarmRuntime:
                     run.total_input_tokens += result.input_tokens
                     run.total_output_tokens += result.output_tokens
 
-                    if result.status in ("completed", "timeout", "token_limit"):
+                    if result.status == "completed":
                         task_summaries[tid] = result.summary
                         now_iso = datetime.now(timezone.utc).isoformat()
                         task_store.update_status(
@@ -270,19 +281,26 @@ class SwarmRuntime:
                         )
                     else:
                         all_succeeded = False
+                        status_error = (
+                            result.error
+                            or f"Task ended with status={result.status}"
+                        )
                         task_store.update_status(
                             tid, TaskStatus.failed,
-                            error=result.error or "Unknown error",
+                            summary=result.summary or None,
+                            error=status_error,
                             completed_at=datetime.now(timezone.utc).isoformat(),
                             worker_iterations=result.iterations,
                         )
                         self._emit_event(
                             run_id,
                             self._make_event("task_failed", task_id=tid,
-                                             data={"error": result.error,
+                                             data={"status": result.status,
+                                                   "error": status_error,
                                                    "input_tokens": result.input_tokens,
                                                    "output_tokens": result.output_tokens}),
                         )
+                    self._persist_running_snapshot(run, task_store)
 
         except Exception as exc:
             logger.error("Run %s failed with exception", run_id, exc_info=True)
@@ -377,10 +395,39 @@ class SwarmRuntime:
                     tid, TaskStatus.in_progress,
                     started_at=datetime.now(timezone.utc).isoformat(),
                 )
+                self._persist_running_snapshot(run, task_store)
                 self._emit_event(
                     run.id,
                     self._make_event("task_started", agent_id=agent_spec.id, task_id=tid),
                 )
+
+                if task.blocked_by:
+                    blocked_error = f"Task blocked by unresolved dependencies: {', '.join(task.blocked_by)}"
+                    logger.warning("Skipping blocked task %s: %s", tid, blocked_error)
+                    task_store.update_status(
+                        tid, TaskStatus.failed,
+                        error=blocked_error,
+                        completed_at=datetime.now(timezone.utc).isoformat(),
+                        worker_iterations=0,
+                    )
+                    self._persist_running_snapshot(run, task_store)
+                    self._emit_event(
+                        run.id,
+                        self._make_event(
+                            "task_failed",
+                            task_id=tid,
+                            data={"status": "blocked", "error": blocked_error, "input_tokens": 0, "output_tokens": 0},
+                        ),
+                    )
+                    results[tid] = WorkerResult(
+                        status="failed",
+                        summary="",
+                        error=blocked_error,
+                        iterations=0,
+                        input_tokens=0,
+                        output_tokens=0,
+                    )
+                    continue
 
                 # Build upstream summaries from input_from mapping
                 upstream: dict[str, str] = {}

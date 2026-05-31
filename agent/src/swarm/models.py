@@ -157,6 +157,7 @@ class SwarmRun(BaseModel):
     Attributes:
         id: Unique run ID (UUID).
         preset_name: Preset name used, e.g. "research_team".
+        account_id: Optional owner account id used for MCP ownership checks.
         status: Run status.
         user_vars: User-provided variables for template rendering.
         agents: List of participating agent definitions.
@@ -170,6 +171,7 @@ class SwarmRun(BaseModel):
 
     id: str
     preset_name: str
+    account_id: str | None = None
     status: RunStatus = RunStatus.pending
     user_vars: dict[str, str] = Field(default_factory=dict)
     agents: list[SwarmAgentSpec] = Field(default_factory=list)

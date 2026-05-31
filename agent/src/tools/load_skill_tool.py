@@ -40,7 +40,16 @@ class LoadSkillTool(BaseTool):
         Returns:
             Full skill documentation or an error message.
         """
-        name = kwargs["name"]
+        name = (
+            kwargs.get("name")
+            or kwargs.get("skill")
+            or kwargs.get("skill_name")
+        )
+        if not isinstance(name, str) or not name.strip():
+            return json.dumps({
+                "status": "error",
+                "error": "Missing required argument: name",
+            }, ensure_ascii=False)
         content = self._loader.get_content(name)
         return json.dumps({
             "status": "ok" if not content.startswith("Error:") else "error",
