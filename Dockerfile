@@ -42,12 +42,16 @@ RUN useradd --create-home --shell /usr/sbin/nologin vibe \
     && chown -R vibe:vibe /app
 USER vibe
 
-# Default port
-EXPOSE 8899
+# Default ports: 8899 = API server, 8900 = MCP SSE server
+EXPOSE 8899 8900
 
-# Health check
+# Health check (API server only — MCP server has no health endpoint)
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
     CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8899/health')" || exit 1
 
-# Run API server (serves frontend/dist as static files)
-CMD ["vibe-trading", "serve", "--host", "0.0.0.0", "--port", "8899"]
+# Copy entrypoint script (owned by vibe so it's executable)
+COPY --chown=vibe:vibe entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
+# Run both API server (8899) and MCP SSE server (8900) via entrypoint
+CMD ["/app/entrypoint.sh"]
